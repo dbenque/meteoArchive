@@ -1,11 +1,12 @@
 package meteoServer
 
 import (
+	"fmt"
 	"io"
 	"log"
-	"meteo/geoloc"
-	"meteo/infoclimat"
-	"meteo/meteoAPI"
+	"meteoArchive/geoloc"
+	"meteoArchive/infoclimat"
+	"meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
 
@@ -28,7 +29,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 		if countryQ, ok := r.URL.Query()["country"]; ok {
 			country = countryQ[0]
 		}
-		poi, err := geoloc.GeolocFromCity(city[0], country, "fr")
+		poi, err := geoloc.FromCity(city[0], country, "fr")
 		if err != nil {
 			w.Write([]byte("Geolo not found"))
 			return
@@ -40,11 +41,8 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 			rayon = float64(rayonInt)
 		}
 
-		stations, _ := infoclimat.GetStations(true)
-
-		tree := kdtree.New(stations, true)
 		keeper := kdtree.NewDistKeeper(rayon)
-		tree.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
+		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
 		output := "Result:\n"
 		for keeper.Len() > 0 {
 			v := keeper.Heap.Pop()
@@ -62,10 +60,116 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func handleNear(w http.ResponseWriter, r *http.Request) {
+
+	if city, ok := r.URL.Query()["city"]; ok {
+		country := "fr"
+		if countryQ, ok := r.URL.Query()["country"]; ok {
+			country = countryQ[0]
+		}
+		poi, err := geoloc.FromCity(city[0], country, "fr")
+		if err != nil {
+			w.Write([]byte("Geolo not found"))
+			return
+		}
+
+		count := 4
+
+		if c, ok := r.URL.Query()["count"]; ok {
+			count, _ = strconv.Atoi(c[0])
+		}
+
+		keeper := kdtree.NewNKeeper(count)
+		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
+		output := "Result:\n"
+		for keeper.Len() > 0 {
+			v := keeper.Heap.Pop()
+
+			if c, ok := v.(kdtree.ComparableDist); ok {
+				if s, ok := c.Comparable.(meteoAPI.Station); ok {
+					output = output + "Station at " + strconv.Itoa(int(c.Dist)) + " km, " + s.Name
+				}
+			}
+			output = output + "\n"
+		}
+		w.Write([]byte(output))
+	} else {
+		w.Write([]byte("Could not read city from GET Query."))
+	}
+
+}
+
+func handleInfoclimateUpdateStations(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	switch vars["storageName"] {
+	case "mapStorage":
+		go func() {
+
+			defer func() { fmt.Println("UpdateStation from infoclimate completed/ended") }()
+
+			inputCode := ""
+			if country, ok := r.URL.Query()["country"]; ok {
+				inputCode = country[0]
+			}
+
+			website := infoclimat.InfoClimatWebsite{}
+			mapStorage := meteoAPI.NewMapStorage("mapStorage")
+			mapStorage.Initialize()
+			website.UpdateStations(mapStorage, inputCode)
+			mapStorage.Persist()
+		}()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Update on going with Infoclimate website"))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+}
+
+func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	switch vars["storageName"] {
+	case "mapStorage":
+		go func() {
+
+			defer func() { fmt.Println("Update kdtree completed/ended") }()
+
+			storage := meteoAPI.NewMapStorage("mapStorage")
+			storage.Initialize()
+			stations := (*storage).GetAllStations()
+			fmt.Println("Station Count:", len(*stations))
+
+			for k, v := range *stations {
+				fmt.Println(k, ":", v.Name)
+
+			}
+
+			kdtreeOfStation = kdtree.New(stations, true)
+		}()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Update on going for kdtree"))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+}
+
+// Server Global Variable
+var kdtreeOfStation *kdtree.Tree
+
+//Serve serve rest API to work on station and meteo measure
 func Serve() {
+
+	storage := meteoAPI.NewMapStorage("mapStorage")
+	storage.Initialize()
+	stations := (*storage).GetAllStations()
+	kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/distance", handleDistance)
+	r.HandleFunc("/near", handleNear)
+	r.HandleFunc("/kdtreeReload/{storageName}", handleKDTreeReload)
+	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimateUpdateStations)
 	http.Handle("/", r)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

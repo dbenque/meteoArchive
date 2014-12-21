@@ -7,26 +7,33 @@ import (
 
 func TestStationsJSON(T *testing.T) {
 
-	filename := "ParisNice.json"
+	storageName := "ParisNice"
 
-	paris := Station{POI{"Paris", 42, 2.3488000, 48.8534100, [...]float64{0., 0., 0.}, false}, "test", "1"}
-	nice := Station{POI{"Nice", 18, 7.2660800, 43.7031300, [...]float64{0., 0., 0.}, false}, "test", "2"}
+	paris := NewStation("Paris", 42, 2.3488000, 48.8534100)
+	nice := NewStation("Nice", 18, 7.2660800, 43.7031300)
 
-	stationsOut := [...]Station{paris, nice}
+	paris.Origin = "test"
+	paris.RemoteID = "0"
+	nice.Origin = "test"
+	nice.RemoteID = "1"
 
-	if StationsAsJSONFile(filename, stationsOut[:]) != nil {
-		T.Fatal("StationsAsJSONFile test")
-	}
+	mapStorage := NewMapStorage(storageName)
+	mapStorage.PutStation(paris)
+	mapStorage.PutStation(nice)
+	mapStorage.Persist()
 
-	stationIn, err := StationsFromJSONFile(filename)
+	anotherStorage := NewMapStorage(storageName)
+	anotherStorage.Initialize()
 
-	if err != nil {
-		T.Fatal("StationsFromJSONFile test")
-	}
+	p := NewStation("", 0, 0, 0)
+	p.Origin = "test"
+	p.RemoteID = "0"
 
-	if stationIn[0].Altitude != 42 {
+	paris2 := anotherStorage.GetStation(p.GetKey())
+
+	if paris2.Altitude != 42 {
 		T.Fatal("Paris altitude is not 42")
 	}
 
-	os.Remove(filename)
+	os.Remove(storageName + ".json")
 }

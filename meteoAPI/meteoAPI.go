@@ -1,22 +1,33 @@
 package meteoAPI
 
 import (
-	"encoding/json"
-	"io/ioutil"
 	"math"
 	"time"
-
-	"code.google.com/p/biogo.store/kdtree"
 )
 
-// ------------------ Stations --------------------
+// ------------------ Math for Longitude/Latitude to x,y,z coordinates --------------------
 const (
 	rayonTerre = 6371.0
 	coordDim   = 3
-	// Randoms is the maximum number of random values to sample for calculation of median of
-	// random elements
-	nbRandoms = 1000
+	piOn180    = math.Pi / 180.
 )
+
+func toRad(d float64) float64 {
+	return d * piOn180
+}
+
+// getCoord return array of coordinates
+func (poi *POI) getCoord() [coordDim]float64 {
+	if !poi.coordCached {
+		poi.coord[0] = rayonTerre * math.Cos(toRad(poi.Latitude)) * math.Cos(toRad(poi.Longitude))
+		poi.coord[1] = rayonTerre * math.Cos(toRad(poi.Latitude)) * math.Sin(toRad(poi.Longitude))
+		poi.coord[2] = rayonTerre * math.Sin(toRad(poi.Latitude))
+		poi.coordCached = true
+	}
+	return poi.coord
+}
+
+// ==================  Structures for Stations =================
 
 // POI point of interest
 type POI struct {
@@ -28,23 +39,6 @@ type POI struct {
 	coordCached bool
 }
 
-const piOn180 = math.Pi / 180.
-
-func toRad(d float64) float64 {
-	return d * piOn180
-}
-
-// GetCoord return array of coordinates
-func (poi *POI) GetCoord() [coordDim]float64 {
-	if !poi.coordCached {
-		poi.coord[0] = rayonTerre * math.Cos(toRad(poi.Latitude)) * math.Cos(toRad(poi.Longitude))
-		poi.coord[1] = rayonTerre * math.Cos(toRad(poi.Latitude)) * math.Sin(toRad(poi.Longitude))
-		poi.coord[2] = rayonTerre * math.Sin(toRad(poi.Latitude))
-		poi.coordCached = true
-	}
-	return poi.coord
-}
-
 // Station meteo station information
 type Station struct {
 	POI
@@ -53,6 +47,17 @@ type Station struct {
 	RemoteMetadata map[string]interface{}
 }
 
+// Stations collection of stations
+type Stations []Station
+
+// ------------------------- Methods and Functions for stations -----------------------
+
+//GetKey return a unique identifier for the station
+func (p *Station) GetKey() string {
+	return p.Origin + "." + p.RemoteID
+}
+
+//PutMetadata insert/modify a Metadata
 func (p *Station) PutMetadata(key string, value interface{}) {
 	if p.RemoteMetadata == nil {
 		p.RemoteMetadata = make(map[string]interface{})
@@ -70,112 +75,96 @@ func NewStationFromPOI(poi POI) *Station {
 	return &Station{poi, "", "", nil}
 }
 
-// Stations collection of stations
-type Stations []Station
-
-// ---------------Implementation of kdtree point interface for station --------------
-
-// Compare compare stations on a given dimension
-func (p Station) Compare(c kdtree.Comparable, d kdtree.Dim) float64 {
-	q := c.(Station)
-	return p.GetCoord()[d] - q.GetCoord()[d]
-}
-
-//Dims Return the number of dimension associated to a station
-func (p Station) Dims() int { return coordDim }
-
-//Distance compute the distance between 2 stations
-func (p Station) Distance(c kdtree.Comparable) float64 {
-	q := c.(Station)
-	var sum float64
-	for dim, c := range p.GetCoord() {
-		d := c - q.GetCoord()[dim]
-		sum += d * d
-	}
-	return math.Sqrt(sum)
-}
-
-//Index return the station associated to the given index
-func (p Stations) Index(i int) kdtree.Comparable { return p[i] }
-
-//Len return the number of stations stored in the list of stations
-func (p Stations) Len() int { return len(p) }
-
-//Pivot compute the pivot index on the given dimension
-func (p Stations) Pivot(d kdtree.Dim) int { return stPlane{Stations: p, Dim: d}.Pivot() }
-
-//Slice slicer
-func (p Stations) Slice(start, end int) kdtree.Interface { return p[start:end] }
-
-// An nbPlane is a wrapping type that allows a Points type be pivoted on a dimension.
-type stPlane struct {
-	kdtree.Dim
-	Stations
-}
-
-func (p stPlane) Less(i, j int) bool {
-	return p.Stations[i].GetCoord()[p.Dim] < p.Stations[j].GetCoord()[p.Dim]
-}
-
-func medianOf(list kdtree.SortSlicer) int {
-	n := list.Len()
-	kdtree.Select(list.Slice(0, n), n/2)
-	return n / 2
-}
-
-//Pivot compute the pivot for the given plane
-func (p stPlane) Pivot() int { return kdtree.Partition(p, medianOf(p)) }
-
-//func (p stPlane) Pivot() int                             { return kdtree.Partition(p, kdtree.MedianOfRandoms(p, nbRandoms)) }
-
-//Slice slicer
-func (p stPlane) Slice(start, end int) kdtree.SortSlicer { p.Stations = p.Stations[start:end]; return p }
-
-//Swap swapper
-func (p stPlane) Swap(i, j int) {
-	p.Stations[i], p.Stations[j] = p.Stations[j], p.Stations[i]
-}
-
-// ------------------- JSON and File helpers --------------------------
-
-// StationsAsJSONFile serialize stations to file
-func StationsAsJSONFile(filename string, stations Stations) error {
-	dataj, _ := json.Marshal(stations)
-	return ioutil.WriteFile(filename, dataj, 0644)
-}
-
-// StationsFromJSONFile serialize stations to file
-func StationsFromJSONFile(filename string) (stations Stations, err error) {
-	filecontent, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(filecontent, &stations)
-
-	return
-}
-
-// ------------------ Measure --------------------
+// ======================= Measures structure ==========================
 
 //Measure set of data that are measured by stations
 type Measure struct {
-	ExtremeMin float32
-	AverageMin float32
-	Average    float32
-	AverageMax float32
-	ExtremeMax float32
+	ExtremeMin float64
+	AverageMin float64
+	Average    float64
+	AverageMax float64
+	ExtremeMax float64
 
-	WhaterMilimeter float32
-	SunHours        float32
+	WhaterMilimeter float64
+	SunHours        float64
 }
 
-// ----------------- Data --------------------------
+//MonthlyMeasureSerie Represent a serie of measure indexed by Months
+type MonthlyMeasureSerie struct {
+	Serie map[int]Measure // index computed as Year*100+Month
+}
 
-//MonthlyReport average over a month for measure on a given station
-type MonthlyReport struct {
-	Measure
-	Station
-	Month time.Month
-	Year  int
+//MeasureStorage interface toward storage
+type MeasureStorage interface {
+}
+
+//----------------------------- Methods and helpers for measure ---------------------------
+
+func (m *Measure) mergeMeasures(source *Measure) {
+
+	if source == nil || m == nil {
+		return
+	}
+
+	if m.Average == 0 && source.Average != 0 {
+		m.Average = source.Average
+	}
+	if m.AverageMin == 0 && source.AverageMin != 0 {
+		m.AverageMin = source.AverageMin
+	}
+	if m.AverageMax == 0 && source.AverageMax != 0 {
+		m.AverageMax = source.AverageMax
+	}
+	if m.ExtremeMin == 0 && source.ExtremeMin != 0 {
+		m.ExtremeMin = source.ExtremeMin
+	}
+	if m.ExtremeMax == 0 && source.ExtremeMax != 0 {
+		m.ExtremeMax = source.ExtremeMax
+	}
+	if m.WhaterMilimeter == 0 && source.WhaterMilimeter != 0 {
+		m.WhaterMilimeter = source.WhaterMilimeter
+	}
+	if m.SunHours == 0 && source.SunHours != 0 {
+		m.SunHours = source.SunHours
+	}
+
+}
+
+// Return the index in the monthlyMeasureSerie
+func getMeasureIndex(year int, month time.Month) int {
+	return year*100 + int(month)
+}
+
+// PutMeasure create or merge non nil field into the MonthlyMeasureSerie
+func (s *MonthlyMeasureSerie) PutMeasure(m Measure, year int, month time.Month) {
+	index := getMeasureIndex(year, month)
+	data, found := s.Serie[index]
+	if !found {
+		s.Serie[index] = m
+	} else {
+		data.mergeMeasures(&m)
+		s.Serie[index] = data
+	}
+	return
+}
+
+//================= Storage ============
+
+//Storage interface toward storage
+type Storage interface {
+	PutStation(p *Station) error
+	GetStation(key string) *Station
+	PutMonthlyMeasureSerie(p *Station, measures *MonthlyMeasureSerie) error
+	GetMonthlyMeasureSerie(p *Station) *MonthlyMeasureSerie
+	Persist()
+	Initialize()
+	GetAllStations() *Stations
+}
+
+//================= Web Grabber Interface ==
+
+// MeteoWebsite interface that should  be implemented by a website grabber
+type MeteoWebsite interface {
+	//UpdateStations go to website and retrieve the list of stations and update the storage
+	UpdateStations(s *Storage, inputCountryCode string)
 }

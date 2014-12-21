@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"meteo/meteoAPI"
+	"meteoArchive/meteoAPI"
 	"net/http"
 )
 
@@ -13,8 +13,8 @@ const (
 	googleAPIURL = "https://maps.googleapis.com/maps/api/geocode/json?"
 )
 
-//GeolocFromCity retrieve the longitude latitude via google API https://developers.google.com/maps/documentation/geocoding/index
-func GeolocFromCity(city string, region string, language string) (poi meteoAPI.POI, err error) {
+//FromCity retrieve the longitude latitude via google API https://developers.google.com/maps/documentation/geocoding/index
+func FromCity(city string, region string, language string) (poi meteoAPI.POI, err error) {
 
 	url := googleAPIURL + "key=" + googleAPIKey + "&address=" + city + "&region=" + region + "&language=" + language
 
