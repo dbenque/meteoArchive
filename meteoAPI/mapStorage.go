@@ -70,7 +70,7 @@ func (s *MapStorage) Initialize() {
 	err = json.Unmarshal(filecontent, s)
 }
 
-//GetStations return all the stations in the storage
+//GetAllStations return all the stations in the storage
 func (s *MapStorage) GetAllStations() *Stations {
 
 	result := make(Stations, len(s.Stations), len(s.Stations))

@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"meteoArchive/geoloc"
 	"meteoArchive/infoclimat"
 	"meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
-  "math"
+
 	"code.google.com/p/biogo.store/kdtree"
 
 	"github.com/gorilla/mux"
@@ -41,7 +42,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 			rayon = float64(rayonInt)
 		}
 
-		keeper := kdtree.NewDistKeeper(rayon*rayon)
+		keeper := kdtree.NewDistKeeper(rayon * rayon)
 		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
 		output := "Result:\n"
 		for keeper.Len() > 0 {

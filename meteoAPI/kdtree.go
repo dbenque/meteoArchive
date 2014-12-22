@@ -1,10 +1,6 @@
 package meteoAPI
 
-import (
-	//"math"
-
-	"code.google.com/p/biogo.store/kdtree"
-)
+import "code.google.com/p/biogo.store/kdtree"
 
 // ---------------Implementation of kdtree point interface for station --------------
 
