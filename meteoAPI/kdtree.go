@@ -1,7 +1,7 @@
 package meteoAPI
 
 import (
-	"math"
+	//"math"
 
 	"code.google.com/p/biogo.store/kdtree"
 )
@@ -25,7 +25,7 @@ func (p Station) Distance(c kdtree.Comparable) float64 {
 		d := c - q.getCoord()[dim]
 		sum += d * d
 	}
-	return math.Sqrt(sum)
+	return sum
 }
 
 //Index return the station associated to the given index

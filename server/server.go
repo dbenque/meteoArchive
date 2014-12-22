@@ -9,7 +9,7 @@ import (
 	"meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
-
+  "math"
 	"code.google.com/p/biogo.store/kdtree"
 
 	"github.com/gorilla/mux"
@@ -41,7 +41,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 			rayon = float64(rayonInt)
 		}
 
-		keeper := kdtree.NewDistKeeper(rayon)
+		keeper := kdtree.NewDistKeeper(rayon*rayon)
 		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
 		output := "Result:\n"
 		for keeper.Len() > 0 {
@@ -49,7 +49,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 
 			if c, ok := v.(kdtree.ComparableDist); ok {
 				if s, ok := c.Comparable.(meteoAPI.Station); ok {
-					output = output + "Station at " + strconv.Itoa(int(c.Dist)) + " km, " + s.Name
+					output = output + "Station at " + strconv.Itoa(int(math.Sqrt(c.Dist))) + " km, " + s.Name
 				}
 			}
 			output = output + "\n"
@@ -138,11 +138,6 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 			storage.Initialize()
 			stations := (*storage).GetAllStations()
 			fmt.Println("Station Count:", len(*stations))
-
-			for k, v := range *stations {
-				fmt.Println(k, ":", v.Name)
-
-			}
 
 			kdtreeOfStation = kdtree.New(stations, true)
 		}()

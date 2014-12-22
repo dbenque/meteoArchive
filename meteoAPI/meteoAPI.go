@@ -3,6 +3,7 @@ package meteoAPI
 import (
 	"math"
 	"time"
+	"fmt"
 )
 
 // ------------------ Math for Longitude/Latitude to x,y,z coordinates --------------------
@@ -14,6 +15,10 @@ const (
 
 func toRad(d float64) float64 {
 	return d * piOn180
+}
+
+func (poi *POI) PrintCoord() {
+	fmt.Println(poi.getCoord())
 }
 
 // getCoord return array of coordinates
