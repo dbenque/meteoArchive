@@ -12,6 +12,10 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+const (
+	OriginStr = "infoclimat"
+)
+
 //InfoClimatWebsite empty function receiver for MeteoWebsite interface
 type InfoClimatWebsite struct {
 }
@@ -60,7 +64,6 @@ func getCities(countryCode string, storage *api.Storage) int {
 	})
 
 	return count
-	// infoclimat.fr/climatologie/anne/2014/{city}/valeurs/{id}.html
 
 }
 
@@ -94,7 +97,7 @@ func getStation(stationID string, stationPath string, storage *api.Storage) {
 		if sta, ok := s.(map[string]interface{}); ok {
 			station := api.NewStation(sta["name"].(string), 0, sta["latitude"].(float64), sta["longitude"].(float64))
 			station.RemoteID = stationID
-			station.Origin = "infoclimat"
+			station.Origin = OriginStr
 			station.PutMetadata("path", stationPath)
 			station.PutMetadata("country", sta["pays"].(string))
 			if sta["miny"].(float64) > 0 {
@@ -111,7 +114,7 @@ func getStation(stationID string, stationPath string, storage *api.Storage) {
 
 }
 
-//UpdateStations update the given storage with the Infoclimatewebsite's stations
+//UpdateStations update the given storage with the Infoclimat website's stations
 func (website *InfoClimatWebsite) UpdateStations(s api.Storage, inputCountryCode string) {
 
 	for code, country := range getCountry() {

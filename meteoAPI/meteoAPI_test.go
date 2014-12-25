@@ -1,8 +1,10 @@
 package meteoAPI
 
 import (
+
 	"os"
 	"testing"
+	"time"
 )
 
 func TestStationsJSON(T *testing.T) {
@@ -36,4 +38,33 @@ func TestStationsJSON(T *testing.T) {
 	}
 
 	os.Remove(storageName + ".json")
+}
+
+func TestPutMeasure(T *testing.T) {
+	serie := make(MonthlyMeasureSerie)
+	m := new(Measure)
+	a := 10.5
+	m.Average = &a
+
+	serie.PutMeasure(m, 2014, time.Month(1))
+
+
+	m2 := new(Measure)
+	aa := 106.5
+	m2.SunHours = &aa
+
+	serie.PutMeasure(m2, 2014, time.Month(1))
+
+	if v,f := serie[100*2014+1]; !f {
+		T.Fatal("nil in serie for hardcoded index")
+		}else {
+			if *(v.Average)!=10.5 {
+				T.Fatal("not 10.5")
+			}
+			if *(v.SunHours)!=106.5 {
+				T.Fatal("not 106.5")
+			}
+
+		}
+
 }

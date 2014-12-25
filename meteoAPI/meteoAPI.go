@@ -2,6 +2,7 @@ package meteoAPI
 
 import (
 	"math"
+	"strconv"
 	"time"
 )
 
@@ -79,71 +80,64 @@ func NewStationFromPOI(poi POI) *Station {
 
 //Measure set of data that are measured by stations
 type Measure struct {
-	ExtremeMin float64
-	AverageMin float64
-	Average    float64
-	AverageMax float64
-	ExtremeMax float64
+	ExtremeMin *float64 `json:"emin,omitempty"`
+	AverageMin *float64 `json:"amin,omitempty"`
+	Average    *float64 `json:"a,omitempty"`
+	AverageMax *float64 `json:"amax,omitempty"`
+	ExtremeMax *float64 `json:"emax,omitempty"`
 
-	WhaterMilimeter float64
-	SunHours        float64
+	WhaterMilimeter *float64 `json:"wmm,omitempty"`
+	SunHours        *float64 `json:"sh,omitempty"`
 }
 
 //MonthlyMeasureSerie Represent a serie of measure indexed by Months
-type MonthlyMeasureSerie struct {
-	Serie map[int]Measure // index computed as Year*100+Month
-}
-
-//MeasureStorage interface toward storage
-type MeasureStorage interface {
-}
+type MonthlyMeasureSerie map[string]Measure // index computed as Year*100+Month
 
 //----------------------------- Methods and helpers for measure ---------------------------
-
 func (m *Measure) mergeMeasures(source *Measure) {
 
 	if source == nil || m == nil {
 		return
 	}
 
-	if m.Average == 0 && source.Average != 0 {
+	if m.Average == nil && source.Average != nil {
 		m.Average = source.Average
 	}
-	if m.AverageMin == 0 && source.AverageMin != 0 {
+	if m.AverageMin == nil && source.AverageMin != nil {
 		m.AverageMin = source.AverageMin
 	}
-	if m.AverageMax == 0 && source.AverageMax != 0 {
+	if m.AverageMax == nil && source.AverageMax != nil {
 		m.AverageMax = source.AverageMax
 	}
-	if m.ExtremeMin == 0 && source.ExtremeMin != 0 {
+	if m.ExtremeMin == nil && source.ExtremeMin != nil {
 		m.ExtremeMin = source.ExtremeMin
 	}
-	if m.ExtremeMax == 0 && source.ExtremeMax != 0 {
+	if m.ExtremeMax == nil && source.ExtremeMax != nil {
 		m.ExtremeMax = source.ExtremeMax
 	}
-	if m.WhaterMilimeter == 0 && source.WhaterMilimeter != 0 {
+	if m.WhaterMilimeter == nil && source.WhaterMilimeter != nil {
 		m.WhaterMilimeter = source.WhaterMilimeter
 	}
-	if m.SunHours == 0 && source.SunHours != 0 {
+	if m.SunHours == nil && source.SunHours != nil {
 		m.SunHours = source.SunHours
 	}
 
 }
 
 // Return the index in the monthlyMeasureSerie
-func getMeasureIndex(year int, month time.Month) int {
-	return year*100 + int(month)
+func getMeasureIndex(year int, month time.Month) string {
+	return strconv.Itoa(year) + "." + strconv.Itoa(int(month))
 }
 
 // PutMeasure create or merge non nil field into the MonthlyMeasureSerie
-func (s *MonthlyMeasureSerie) PutMeasure(m Measure, year int, month time.Month) {
+func (s *MonthlyMeasureSerie) PutMeasure(m *Measure, year int, month time.Month) {
 	index := getMeasureIndex(year, month)
-	data, found := s.Serie[index]
+	data, found := (*s)[index]
 	if !found {
-		s.Serie[index] = m
+		(*s)[index] = *m
 	} else {
-		data.mergeMeasures(&m)
-		s.Serie[index] = data
+		data.mergeMeasures(m)
+		(*s)[index] = data
 	}
 	return
 }
@@ -167,4 +161,5 @@ type Storage interface {
 type MeteoWebsite interface {
 	//UpdateStations go to website and retrieve the list of stations and update the storage
 	UpdateStations(s *Storage, inputCountryCode string)
+	RetrieveMonthlyReports(station *Station, year int) MonthlyMeasureSerie
 }

@@ -1,6 +1,7 @@
 package meteoServer
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -100,13 +101,13 @@ func handleNear(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handleInfoclimateUpdateStations(w http.ResponseWriter, r *http.Request) {
+func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	switch vars["storageName"] {
 	case "mapStorage":
 		go func() {
 
-			defer func() { fmt.Println("UpdateStation from infoclimate completed/ended") }()
+			defer func() { fmt.Println("UpdateStation from infoclimat completed/ended") }()
 
 			inputCode := ""
 			if country, ok := r.URL.Query()["country"]; ok {
@@ -120,7 +121,7 @@ func handleInfoclimateUpdateStations(w http.ResponseWriter, r *http.Request) {
 			mapStorage.Persist()
 		}()
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Update on going with Infoclimate website"))
+		w.Write([]byte("Update on going with Infoclimat website"))
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 	}
@@ -150,6 +151,34 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func handleInfoclimatUpdateMonthlySerie(w http.ResponseWriter, r *http.Request) {
+
+	vars := mux.Vars(r)
+	switch vars["storageName"] {
+	case "mapStorage":
+		go func() {
+
+			defer func() { fmt.Println("Update Monthly completed/ended") }()
+
+			storage := meteoAPI.NewMapStorage("mapStorage")
+			storage.Initialize()
+			stations := (*storage).GetAllStations()
+
+			serie := infoclimat.RetrieveMonthlyReports(&(*stations)[100], 2013)
+
+			//fmt.Println(len(*serie))
+			dataj, _ := json.Marshal(*serie)
+			fmt.Println(string(dataj))
+
+		}()
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("On Going"))
+	default:
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+}
+
 // Server Global Variable
 var kdtreeOfStation *kdtree.Tree
 
@@ -165,7 +194,8 @@ func Serve() {
 	r.HandleFunc("/distance", handleDistance)
 	r.HandleFunc("/near", handleNear)
 	r.HandleFunc("/kdtreeReload/{storageName}", handleKDTreeReload)
-	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimateUpdateStations)
+	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
+	r.HandleFunc("/infoclimat/updateMonthlySerie/{storageName}", handleInfoclimatUpdateMonthlySerie)
 	http.Handle("/", r)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
