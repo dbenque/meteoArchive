@@ -2,6 +2,7 @@ package meteoServer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -26,78 +27,114 @@ func serveError(w http.ResponseWriter, err error) {
 func handleDistance(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte("Distance"))
-	if city, ok := r.URL.Query()["city"]; ok {
-		country := "fr"
-		if countryQ, ok := r.URL.Query()["country"]; ok {
-			country = countryQ[0]
-		}
-		poi, err := geoloc.FromCity(city[0], country, "fr")
-		if err != nil {
-			w.Write([]byte("Geolo not found"))
-			return
-		}
 
-		rayon := 100.0
-		if rayonStr, ok := r.URL.Query()["rayon"]; ok {
-			rayonInt, _ := strconv.Atoi(rayonStr[0])
-			rayon = float64(rayonInt)
-		}
-
-		keeper := kdtree.NewDistKeeper(rayon * rayon)
-		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
-		output := "Result:\n"
-		for keeper.Len() > 0 {
-			v := keeper.Heap.Pop()
-
-			if c, ok := v.(kdtree.ComparableDist); ok {
-				if s, ok := c.Comparable.(meteoAPI.Station); ok {
-					output = output + "Station at " + strconv.Itoa(int(math.Sqrt(c.Dist))) + " km, " + s.Name
-				}
-			}
-			output = output + "\n"
-		}
-		w.Write([]byte(output))
-	} else {
-		w.Write([]byte("Could not read city from GET Query."))
+	city, country, _, err := readCityCountryCountFromURL(r)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
 	}
+
+	poi, err := geoloc.FromCity(city, country, "fr")
+	if err != nil {
+		w.Write([]byte("Geolo not found"))
+		return
+	}
+
+	rayon := 100.0
+	if rayonStr, ok := r.URL.Query()["rayon"]; ok {
+		rayonInt, _ := strconv.Atoi(rayonStr[0])
+		rayon = float64(rayonInt)
+	}
+
+	keeper := kdtree.NewDistKeeper(rayon * rayon)
+	kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
+	output := "Result:\n"
+	for keeper.Len() > 0 {
+		v := keeper.Heap.Pop()
+
+		if c, ok := v.(kdtree.ComparableDist); ok {
+			if s, ok := c.Comparable.(meteoAPI.Station); ok {
+				output = output + "Station at " + strconv.Itoa(int(math.Sqrt(c.Dist))) + " km, " + s.Name
+			}
+		}
+		output = output + "\n"
+	}
+	w.Write([]byte(output))
+
+}
+
+type stationAndDistance struct {
+	station  *meteoAPI.Station
+	distance float64
+}
+
+func getNearest(city string, country string, count int) (nearStations []stationAndDistance) {
+
+	poi, err := geoloc.FromCity(city, country, "fr")
+	if err != nil {
+		return
+	}
+
+	keeper := kdtree.NewNKeeper(count)
+	kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
+
+	for keeper.Len() > 0 {
+		v := keeper.Heap.Pop()
+
+		if c, ok := v.(kdtree.ComparableDist); ok {
+			if s, ok := c.Comparable.(meteoAPI.Station); ok {
+				nearStations = append(nearStations, stationAndDistance{&s, math.Sqrt(c.Dist)})
+			}
+		}
+	}
+	return
+}
+
+func readCityCountryCountFromURL(r *http.Request) (city, country string, count int, err error) {
+
+	country = "fr"
+	count = 4
+	city = ""
+
+	if cityurl, ok := r.URL.Query()["city"]; ok {
+		city = cityurl[0]
+	} else {
+		errors.New("Could not read city from GET Query.")
+	}
+
+	if countryurl, ok := r.URL.Query()["country"]; ok {
+		country = countryurl[0]
+	}
+
+	if counturl, ok := r.URL.Query()["count"]; ok {
+		if count, err = strconv.Atoi(counturl[0]); err != nil {
+			errors.New("count parameter is not an int")
+		}
+	}
+	return
 }
 
 func handleNear(w http.ResponseWriter, r *http.Request) {
 
-	if city, ok := r.URL.Query()["city"]; ok {
-		country := "fr"
-		if countryQ, ok := r.URL.Query()["country"]; ok {
-			country = countryQ[0]
-		}
-		poi, err := geoloc.FromCity(city[0], country, "fr")
-		if err != nil {
-			w.Write([]byte("Geolo not found"))
-			return
-		}
-
-		count := 4
-
-		if c, ok := r.URL.Query()["count"]; ok {
-			count, _ = strconv.Atoi(c[0])
-		}
-
-		keeper := kdtree.NewNKeeper(count)
-		kdtreeOfStation.NearestSet(keeper, meteoAPI.NewStationFromPOI(poi))
-		output := "Result:\n"
-		for keeper.Len() > 0 {
-			v := keeper.Heap.Pop()
-
-			if c, ok := v.(kdtree.ComparableDist); ok {
-				if s, ok := c.Comparable.(meteoAPI.Station); ok {
-					output = output + "Station at " + strconv.Itoa(int(c.Dist)) + " km, " + s.Name
-				}
-			}
-			output = output + "\n"
-		}
-		w.Write([]byte(output))
-	} else {
-		w.Write([]byte("Could not read city from GET Query."))
+	city, country, count, err := readCityCountryCountFromURL(r)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
 	}
+
+	nearStations := getNearest(city, country, count)
+
+	if len(nearStations) == 0 {
+		w.Write([]byte("Geolo not found"))
+		return
+	}
+
+	output := "Result:\n"
+	for _, s := range nearStations {
+		output = output + "Station at " + strconv.Itoa(int(s.distance)) + " km, " + s.station.Name + "\n"
+	}
+
+	w.Write([]byte(output))
 
 }
 
@@ -151,31 +188,25 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handleInfoclimatUpdateMonthlySerie(w http.ResponseWriter, r *http.Request) {
+func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
-	vars := mux.Vars(r)
-	switch vars["storageName"] {
-	case "mapStorage":
-		go func() {
-
-			defer func() { fmt.Println("Update Monthly completed/ended") }()
-
-			storage := meteoAPI.NewMapStorage("mapStorage")
-			storage.Initialize()
-			stations := (*storage).GetAllStations()
-
-			serie := infoclimat.RetrieveMonthlyReports(&(*stations)[100], 2013)
-
-			//fmt.Println(len(*serie))
-			dataj, _ := json.Marshal(*serie)
-			fmt.Println(string(dataj))
-
-		}()
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("On Going"))
-	default:
-		w.WriteHeader(http.StatusBadRequest)
+	city, country, _, err := readCityCountryCountFromURL(r)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		return
 	}
+
+	output := "Resulat:\n"
+
+	for _, stationAndDist := range getNearest(city, country, 3) {
+		serie := infoclimat.RetrieveMonthlyReports(stationAndDist.station, 2013)
+		dataj, _ := json.Marshal(*serie)
+		output = output + stationAndDist.station.Name + "(" + strconv.Itoa(int(stationAndDist.distance)) + "): " + string(dataj) + "\n"
+
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(output))
 
 }
 
@@ -195,7 +226,7 @@ func Serve() {
 	r.HandleFunc("/near", handleNear)
 	r.HandleFunc("/kdtreeReload/{storageName}", handleKDTreeReload)
 	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
-	r.HandleFunc("/infoclimat/updateMonthlySerie/{storageName}", handleInfoclimatUpdateMonthlySerie)
+	r.HandleFunc("/infoclimat/getMonthlySerie", handleInfoclimatGetMonthlySerie)
 	http.Handle("/", r)
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
