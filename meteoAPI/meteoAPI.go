@@ -90,7 +90,7 @@ type Measure struct {
 	SunHours        *float64 `json:"sh,omitempty"`
 }
 
-//MonthlyMeasureSerie Represent a serie of measure indexed by Months
+//MonthlyMeasureSerie Represent erie of measure indexed by Months
 type MonthlyMeasureSerie map[string]Measure // index computed as Year*100+Month
 
 //----------------------------- Methods and helpers for measure ---------------------------
