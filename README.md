@@ -1,7 +1,7 @@
 meteoArchive
 ============
 
-API to access meteo archive
+API to access meteo archive:
 
 http://127.0.0.1:8080/infoclimat/getMonthlySerie?city=84230&country=FR
 http://127.0.0.1:8080/kdtreeReload/mapStorage
