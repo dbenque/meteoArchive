@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	api "meteo/meteoAPI"
+	api "github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 )
 

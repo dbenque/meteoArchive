@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 )
 

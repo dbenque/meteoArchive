@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	api "meteoArchive/meteoAPI"
+	api "github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
 

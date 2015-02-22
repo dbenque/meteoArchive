@@ -3,7 +3,7 @@ package meteoServer
 import (
 	"io"
 	"log"
-	"meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 
 	"code.google.com/p/biogo.store/kdtree"

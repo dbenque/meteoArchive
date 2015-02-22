@@ -2,7 +2,7 @@ package infoclimat
 
 import (
 	"fmt"
-	"meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 	"reflect"
 	"regexp"
 	"strconv"

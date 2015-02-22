@@ -3,8 +3,8 @@ package meteoServer
 import (
 	"fmt"
 	"math"
-	"meteoArchive/geoloc"
-	"meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/geoloc"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
 

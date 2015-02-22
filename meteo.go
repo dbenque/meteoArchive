@@ -1,6 +1,6 @@
 package main
 
-import "meteoArchive/server"
+import "github.com/dbenque/meteoArchive/server"
 
 func main() {
 

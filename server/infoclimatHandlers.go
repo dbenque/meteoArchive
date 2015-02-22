@@ -3,8 +3,8 @@ package meteoServer
 import (
 	"encoding/json"
 	"fmt"
-	"meteoArchive/infoclimat"
-	"meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/infoclimat"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
 
