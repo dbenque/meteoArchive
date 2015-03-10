@@ -67,7 +67,7 @@ func readYearFromURL(r *http.Request) (year int, err error) {
 	year = 0
 	if yearStr, ok := r.URL.Query()["year"]; ok {
 		year, err = strconv.Atoi(yearStr[0])
-		if err != nil {
+		if err == nil {
 			return
 		}
 		if year > time.Now().Year() || year < 1900 {

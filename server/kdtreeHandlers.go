@@ -3,12 +3,11 @@ package meteoServer
 import (
 	"fmt"
 	"math"
-	"github.com/dbenque/meteoArchive/geoloc"
-	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
+	"github.com/dbenque/meteoArchive/geoloc"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"code.google.com/p/biogo.store/kdtree"
 )
@@ -133,24 +132,16 @@ func handleNear(w http.ResponseWriter, r *http.Request) {
 
 func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
-	vars := mux.Vars(r)
-	switch vars["storageName"] {
-	case "mapStorage":
-		go func() {
+	go func() {
 
-			defer func() { fmt.Println("Update kdtree completed/ended") }()
+		defer func() { fmt.Println("Update kdtree completed/ended") }()
 
-			storage := meteoAPI.NewMapStorage("mapStorage")
-			storage.Initialize()
-			stations := (*storage).GetAllStations()
-			fmt.Println("Station Count:", len(*stations))
+		serverStorage.Initialize()
+		stations := serverStorage.GetAllStations()
+		fmt.Println("Station Count:", len(*stations))
 
-			kdtreeOfStation = kdtree.New(stations, true)
-		}()
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Update on going for kdtree"))
-	default:
-		w.WriteHeader(http.StatusBadRequest)
-	}
-
+		kdtreeOfStation = kdtree.New(stations, true)
+	}()
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Update on going for kdtree"))
 }

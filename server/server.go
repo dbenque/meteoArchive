@@ -2,9 +2,9 @@ package meteoServer
 
 import (
 	"io"
-	"log"
-	"github.com/dbenque/meteoArchive/meteoAPI"
 	"net/http"
+
+	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"code.google.com/p/biogo.store/kdtree"
 
@@ -19,13 +19,14 @@ func serveError(w http.ResponseWriter, err error) {
 
 // Server Global Variable
 var kdtreeOfStation *kdtree.Tree
+var serverStorage meteoAPI.Storage
 
 //Serve serve rest API to work on station and meteo measure
-func Serve() {
+func ApplyHttpHandler(storage meteoAPI.Storage) {
 
-	storage := meteoAPI.NewMapStorage("mapStorage")
-	storage.Initialize()
-	stations := (*storage).GetAllStations()
+	serverStorage = storage
+	serverStorage.Initialize()
+	stations := serverStorage.GetAllStations()
 	kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
@@ -35,8 +36,5 @@ func Serve() {
 	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
 	r.HandleFunc("/infoclimat/getMonthlySerie", handleInfoclimatGetMonthlySerie)
 	http.Handle("/", r)
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
-	}
+
 }

@@ -80,14 +80,14 @@ func NewStationFromPOI(poi POI) *Station {
 
 //Measure set of data that are measured by stations
 type Measure struct {
-	ExtremeMin *float64 `json:"emin,omitempty"`
-	AverageMin *float64 `json:"amin,omitempty"`
+	ExtremeMin *float64 `json:"em,omitempty"`
+	AverageMin *float64 `json:"am,omitempty"`
 	Average    *float64 `json:"a,omitempty"`
-	AverageMax *float64 `json:"amax,omitempty"`
-	ExtremeMax *float64 `json:"emax,omitempty"`
+	AverageMax *float64 `json:"aM,omitempty"`
+	ExtremeMax *float64 `json:"eM,omitempty"`
 
-	WhaterMilimeter *float64 `json:"wmm,omitempty"`
-	SunHours        *float64 `json:"sh,omitempty"`
+	WhaterMilimeter *float64 `json:"w,omitempty"`
+	SunHours        *float64 `json:"s,omitempty"`
 }
 
 //MonthlyMeasureSerie Represent erie of measure indexed by Months
@@ -140,6 +140,17 @@ func (s *MonthlyMeasureSerie) PutMeasure(m *Measure, year int, month time.Month)
 		(*s)[index] = data
 	}
 	return
+}
+
+// GetMeasure from the MonthlyMeasureSerie. Nil if it does not exist
+func (s *MonthlyMeasureSerie) GetMeasure(year int, month time.Month) *Measure {
+	index := getMeasureIndex(year, month)
+	data, found := (*s)[index]
+	if !found {
+		return nil
+	} else {
+		return &data
+	}
 }
 
 //================= Storage ============

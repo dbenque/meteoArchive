@@ -2,12 +2,13 @@ package infoclimat
 
 import (
 	"fmt"
-	"github.com/dbenque/meteoArchive/meteoAPI"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -59,13 +60,19 @@ var mapRowTitleToFieldName = map[string]string{
 	"Pressionmaximale":          skipStr,
 }
 
-//RetrieveMonthlyReports go to infoclimat website and get the monthly report
-func RetrieveMonthlyReports(station *meteoAPI.Station, year int) *meteoAPI.MonthlyMeasureSerie {
+//CompleteMonthlyReports go to infoclimat website and get the monthly report and complete the given serie
+func CompleteMonthlyReports(serie *meteoAPI.MonthlyMeasureSerie, station *meteoAPI.Station, year int) {
 	// infoclimat.fr/climatologie/anne/2014/{city}/valeurs/{id}.html
 
 	// Check if that station is from Infoclimat
 	if station.Origin != OriginStr {
-		return nil
+		return
+	}
+
+	// Check if that station is from Infoclimat
+	if serie == nil {
+		fmt.Println("CompleteMonthlyReports: nil serie as input!")
+		return
 	}
 
 	// format url toward the monthly report for the year
@@ -75,14 +82,17 @@ func RetrieveMonthlyReports(station *meteoAPI.Station, year int) *meteoAPI.Month
 	doc, err := goquery.NewDocument(url)
 	if err != nil {
 		fmt.Println(err)
-		return nil
+		return
 	}
 
 	// log
 	fmt.Println("RetrieveMonthlyReports: ", url)
 
-	// serie containing the browsing result
-	serie := make(meteoAPI.MonthlyMeasureSerie)
+	// initialize empty measure
+	emptyMeasure := new(meteoAPI.Measure)
+	for i := 1; i <= 12; i++ {
+		serie.PutMeasure(emptyMeasure, year, time.Month(i))
+	}
 
 	// main array to be browsed
 	doc.Find("#tableau-releves").Each(func(i int, s *goquery.Selection) { //Tableau
@@ -104,6 +114,7 @@ func RetrieveMonthlyReports(station *meteoAPI.Station, year int) *meteoAPI.Month
 
 						// decode the numeric value
 						s := cells.Eq(i)
+
 						if f := purgeCellToGetMeasure((*s).Text()); f != nil {
 							m := new(meteoAPI.Measure)
 							reflect.ValueOf(m).Elem().FieldByName(fieldName).Set(reflect.ValueOf(f))
@@ -121,6 +132,6 @@ func RetrieveMonthlyReports(station *meteoAPI.Station, year int) *meteoAPI.Month
 			}
 		})
 	})
-	return &serie
+	return
 
 }
