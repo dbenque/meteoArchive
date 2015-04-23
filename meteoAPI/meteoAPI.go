@@ -32,10 +32,10 @@ func (poi *POI) getCoord() [coordDim]float64 {
 
 // POI point of interest
 type POI struct {
-	Name        string
-	Altitude    float64
-	Latitude    float64
-	Longitude   float64
+	Name        string  `json:"name,omitempty"`
+	Altitude    float64 `json:"alt,omitempty"`
+	Latitude    float64 `json:"lat,omitempty"`
+	Longitude   float64 `json:"lon,omitempty"`
 	coord       [coordDim]float64
 	coordCached bool
 }
@@ -92,6 +92,14 @@ type Measure struct {
 
 //MonthlyMeasureSerie Represent erie of measure indexed by Months
 type MonthlyMeasureSerie map[string]Measure // index computed as Year*100+Month
+
+// type MonthlyMeasureSerieAtDistance struct {
+// 	Distance            *float64 `json:"km"`
+// 	MonthlyMeasureSerie serie
+// }
+//
+// //Object to be serialized to output result of monthly series for stations
+// type MonthlyMeasureSerieForPOIs map[POI]MonthlyMeasureSerieAtDistance
 
 //----------------------------- Methods and helpers for measure ---------------------------
 func (m *Measure) mergeMeasures(source *Measure) {

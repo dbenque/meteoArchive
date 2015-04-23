@@ -30,6 +30,7 @@ func ApplyHttpHandler(storage meteoAPI.Storage) {
 	kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
+	//r.HandleFunc("/geoloc", handleGetGeoloc)
 	r.HandleFunc("/distance", handleDistance)
 	r.HandleFunc("/near", handleNear)
 	r.HandleFunc("/kdtreeReload/{storageName}", handleKDTreeReload)

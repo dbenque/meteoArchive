@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/dbenque/meteoArchive/infoclimat"
@@ -29,6 +28,21 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Update Stations on going with Infoclimat website"))
 }
 
+type resultData struct {
+	meteoAPI.POI
+	Km    int                          `json:"km,omitempty"`
+	Serie meteoAPI.MonthlyMeasureSerie `json:"serie,omitempty"`
+}
+
+type resultsByCity struct {
+	Results []resultData `json:"results,omitempty"`
+}
+
+//output := "Resulat:\n"
+// type results struct {
+// 	Results []resultForCity
+// }
+
 func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
 	city, country, err := readCityCountryFromURL(r)
@@ -42,9 +56,13 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	output := "Resulat:\n"
+	nbResult := 3
 
-	for _, stationAndDist := range getNearestByStr(city, country, 3) {
+	// resultsObj := results{ make([]resultForCity, nbResult) }
+
+	resultsObj := resultsByCity{make([]resultData, 3)}
+
+	for index, stationAndDist := range getNearestByStr(city, country, nbResult) {
 
 		serie := serverStorage.GetMonthlyMeasureSerie(stationAndDist.station)
 		if serie == nil { // The Serie for the station does not even exist!
@@ -60,12 +78,16 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Serie retrieved from storage")
 		}
 
-		dataj, _ := json.Marshal(*serie)
-		output = output + stationAndDist.station.Name + "(" + strconv.Itoa(int(stationAndDist.distance)) + "): " + string(dataj) + "\n"
-
+		data := resultData{stationAndDist.station.POI, int(stationAndDist.distance), *serie}
+		//resultsObj.Result[stationAndDist.station.Name] = data
+		resultsObj.Results[index] = data
+		//dataj, _ := json.Marshal(*serie)
+		//output = output + stationAndDist.station.Name + "(" + strconv.Itoa(int(stationAndDist.distance)) + "): " + string(dataj) + "\n"
 	}
 
+	dataj, _ := json.Marshal(resultsObj)
+
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(output))
+	w.Write(dataj) //[]byte(output)
 
 }
