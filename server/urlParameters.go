@@ -2,6 +2,7 @@ package meteoServer
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -25,7 +26,7 @@ func readCityCountryFromURL(r *http.Request) (city, country string, err error) {
 	if cityurl, ok := r.URL.Query()["city"]; ok {
 		city = cityurl[0]
 	} else {
-		errors.New("Could not read city from GET Query.")
+		err = errors.New("Could not read city from GET Query.")
 	}
 
 	if countryurl, ok := r.URL.Query()["country"]; ok {
@@ -49,18 +50,18 @@ func readLatitudeLongitudeFromURL(r *http.Request) (lat, lon float64, err error)
 				return
 			}
 		} else {
+			fmt.Println("Missing Longitude")
 			err = errors.New("Missing Longitude")
 			return
 		}
-	}
 
-	if _, ok := r.URL.Query()["lon"]; ok {
-		err = errors.New("missing Latitude")
 		return
 	}
 
-	err = errors.New("No Geoloc")
+	fmt.Println("Missing Latitude")
+	err = errors.New("missing Latitude")
 	return
+
 }
 
 func readYearFromURL(r *http.Request) (year int, err error) {

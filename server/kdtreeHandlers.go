@@ -1,6 +1,7 @@
 package meteoServer
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -48,6 +49,28 @@ func getNearest(poi meteoAPI.POI, count int) (nearStations []stationAndDistance)
 		}
 	}
 	return
+}
+
+func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
+
+	city, country, err := readCityCountryFromURL(r)
+	if err != nil {
+		w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	poi, err := geoloc.FromCity(city, country, "fr")
+	if err != nil {
+		w.Write([]byte("Geolo not found"))
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+	dataj, _ := json.Marshal(poi)
+
+	w.WriteHeader(http.StatusOK)
+	w.Write(dataj) //[]byte(output)
+
 }
 
 func handleDistance(w http.ResponseWriter, r *http.Request) {

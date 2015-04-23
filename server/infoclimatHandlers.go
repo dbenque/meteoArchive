@@ -38,31 +38,39 @@ type resultsByCity struct {
 	Results []resultData `json:"results,omitempty"`
 }
 
-//output := "Resulat:\n"
-// type results struct {
-// 	Results []resultForCity
-// }
-
 func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
-	city, country, err := readCityCountryFromURL(r)
-	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
-	}
+	var nearStations []stationAndDistance
+
 	year, err := readYearFromURL(r)
 	if err != nil {
 		w.Write([]byte(err.Error()))
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	nbResult := 3
 
-	// resultsObj := results{ make([]resultForCity, nbResult) }
+	var city, country string
+	latitude, longitute, err := readLatitudeLongitudeFromURL(r)
+	if err != nil {
+		err = nil
+		city, country, err = readCityCountryFromURL(r)
+		if err != nil {
+			w.Write([]byte(err.Error()))
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		fmt.Println("By Str")
+		nearStations = getNearestByStr(city, country, nbResult)
 
-	resultsObj := resultsByCity{make([]resultData, 3)}
+	} else {
+		fmt.Println("By Coord")
+		nearStations = getNearestByCoord(latitude, longitute, nbResult)
+	}
 
-	for index, stationAndDist := range getNearestByStr(city, country, nbResult) {
+	resultsObj := resultsByCity{make([]resultData, nbResult)}
+	for index, stationAndDist := range nearStations {
 
 		serie := serverStorage.GetMonthlyMeasureSerie(stationAndDist.station)
 		if serie == nil { // The Serie for the station does not even exist!
@@ -78,16 +86,12 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Serie retrieved from storage")
 		}
 
-		data := resultData{stationAndDist.station.POI, int(stationAndDist.distance), *serie}
-		//resultsObj.Result[stationAndDist.station.Name] = data
-		resultsObj.Results[index] = data
-		//dataj, _ := json.Marshal(*serie)
-		//output = output + stationAndDist.station.Name + "(" + strconv.Itoa(int(stationAndDist.distance)) + "): " + string(dataj) + "\n"
+		resultsObj.Results[index] = resultData{stationAndDist.station.POI, int(stationAndDist.distance), *serie}
 	}
 
 	dataj, _ := json.Marshal(resultsObj)
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(dataj) //[]byte(output)
+	w.Write(dataj)
 
 }
