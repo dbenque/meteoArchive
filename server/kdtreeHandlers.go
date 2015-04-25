@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/geoloc"
 	"github.com/dbenque/meteoArchive/meteoAPI"
 
@@ -19,9 +20,9 @@ type stationAndDistance struct {
 	distance float64
 }
 
-func getNearestByStr(city string, country string, count int) (nearStations []stationAndDistance) {
+func getNearestByStr(client meteoClient.URLGetter, city string, country string, count int) (nearStations []stationAndDistance) {
 
-	poi, err := geoloc.FromCity(city, country, "fr")
+	poi, err := geoloc.FromCity(client, city, country, "fr")
 	if err != nil {
 		return
 	}
@@ -61,10 +62,11 @@ func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	poi, err := geoloc.FromCity(city, country, "fr")
+	poi, err := geoloc.FromCity(meteoClient.ClientFactory(r), city, country, "fr")
 	if err != nil {
-		w.Write([]byte("Geolo not found"))
+		w.Write([]byte(err.Error()))
 		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 
 	dataj, _ := json.Marshal(poi)
@@ -84,7 +86,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	poi, err := geoloc.FromCity(city, country, "fr")
+	poi, err := geoloc.FromCity(meteoClient.ClientFactory(r), city, country, "fr")
 	if err != nil {
 		w.Write([]byte("Geolo not found"))
 		return
@@ -134,7 +136,7 @@ func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []st
 		if err != nil {
 			return
 		}
-		nearStations = getNearestByStr(city, country, count)
+		nearStations = getNearestByStr(meteoClient.ClientFactory(r), city, country, count)
 
 	} else {
 		nearStations = getNearestByCoord(latitude, longitute, count)
@@ -167,16 +169,20 @@ func handleNear(w http.ResponseWriter, r *http.Request) {
 
 func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
-	go func() {
+	//	go func() {
 
-		defer func() { fmt.Println("Update kdtree completed/ended") }()
+	//		defer func() { fmt.Println("Update kdtree completed/ended") }()
 
-		serverStorage.Initialize()
-		stations := serverStorage.GetAllStations()
-		fmt.Println("Station Count:", len(*stations))
+	if err := serverStorage.Initialize(); err != nil {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(err.Error()))
+		return
+	}
+	stations := serverStorage.GetAllStations()
+	fmt.Println("Station Count:", len(*stations))
 
-		kdtreeOfStation = kdtree.New(stations, true)
-	}()
+	kdtreeOfStation = kdtree.New(stations, true)
+	//	}()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Update on going for kdtree"))
 }

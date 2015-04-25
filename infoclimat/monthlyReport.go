@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"github.com/PuerkitoBio/goquery"
@@ -61,7 +62,7 @@ var mapRowTitleToFieldName = map[string]string{
 }
 
 //CompleteMonthlyReports go to infoclimat website and get the monthly report and complete the given serie
-func CompleteMonthlyReports(serie *meteoAPI.MonthlyMeasureSerie, station *meteoAPI.Station, year int) {
+func CompleteMonthlyReports(getter meteoClient.URLGetter, serie *meteoAPI.MonthlyMeasureSerie, station *meteoAPI.Station, year int) {
 	// infoclimat.fr/climatologie/anne/2014/{city}/valeurs/{id}.html
 
 	// Check if that station is from Infoclimat
@@ -79,7 +80,7 @@ func CompleteMonthlyReports(serie *meteoAPI.MonthlyMeasureSerie, station *meteoA
 	url := "http://www.infoclimat.fr/climatologie/annee/" + strconv.Itoa(year) + "/" + station.RemoteMetadata["path"].(string) + "/valeurs/" + station.RemoteID + ".html"
 
 	// get html document
-	doc, err := goquery.NewDocument(url)
+	doc, err := meteoClient.GetGoqueryDocument(getter, url)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -179,8 +179,8 @@ type Storage interface {
 	GetStation(key string) *Station
 	PutMonthlyMeasureSerie(p *Station, measures *MonthlyMeasureSerie) error
 	GetMonthlyMeasureSerie(p *Station) *MonthlyMeasureSerie
-	Persist()
-	Initialize()
+	Persist() error
+	Initialize() error
 	GetAllStations() *Stations
 }
 

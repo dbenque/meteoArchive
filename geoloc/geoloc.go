@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+
+	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/meteoAPI"
-	"net/http"
 )
 
 const (
@@ -14,21 +15,26 @@ const (
 )
 
 //FromCity retrieve the longitude latitude via google API https://developers.google.com/maps/documentation/geocoding/index
-func FromCity(city string, region string, language string) (poi meteoAPI.POI, err error) {
+func FromCity(getter meteoClient.URLGetter, city string, region string, language string) (poi meteoAPI.POI, err error) {
 
 	url := googleAPIURL + "key=" + googleAPIKey + "&address=" + city + "&region=" + region + "&language=" + language
 
-	client := &http.Client{CheckRedirect: nil}
-	req, err := http.NewRequest("GET", url, nil)
-	response, err := client.Do(req)
-	if err != nil {
-		return
-	}
+	// client := &http.Client{CheckRedirect: nil}
+	// req, err := http.NewRequest("GET", url, nil)
+	// response, err := client.Do(req)
+	// if err != nil {
+	// 	return
+	// }
+	// response.Body.Close()
+
+	response, err := getter.Get(url)
+	defer response.Body.Close()
+
 	responseStr, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return
 	}
-	response.Body.Close()
+
 	var dataj map[string]interface{}
 	if err = json.Unmarshal(responseStr, &dataj); err != nil {
 		return poi, err

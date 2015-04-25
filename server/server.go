@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/dbenque/meteoArchive/meteoAPI"
-
 	"code.google.com/p/biogo.store/kdtree"
+	"github.com/dbenque/meteoArchive/client"
+	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"github.com/gorilla/mux"
 )
@@ -22,20 +22,21 @@ var kdtreeOfStation *kdtree.Tree
 var serverStorage meteoAPI.Storage
 
 //Serve serve rest API to work on station and meteo measure
-func ApplyHttpHandler(storage meteoAPI.Storage) {
+func ApplyHttpHandler(storage meteoAPI.Storage, clientFactory meteoClient.URLGetterFactory) {
 
+	meteoClient.ClientFactory = clientFactory
 	serverStorage = storage
 	serverStorage.Initialize()
 	stations := serverStorage.GetAllStations()
 	kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
-	r.HandleFunc("/geoloc", handleGetGeoloc)
-	r.HandleFunc("/distance", handleDistance)
-	r.HandleFunc("/near", handleNear)
-	r.HandleFunc("/kdtreeReload/{storageName}", handleKDTreeReload)
-	r.HandleFunc("/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
-	r.HandleFunc("/infoclimat/getMonthlySerie", handleInfoclimatGetMonthlySerie)
+	r.HandleFunc("/meteo/geoloc", handleGetGeoloc)
+	r.HandleFunc("/meteo/distance", handleDistance)
+	r.HandleFunc("/meteo/near", handleNear)
+	r.HandleFunc("/meteo/kdtreeReload/{storageName}", handleKDTreeReload)
+	r.HandleFunc("/meteo/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
+	r.HandleFunc("/meteo/infoclimat/getMonthlySerie", handleInfoclimatGetMonthlySerie)
 	http.Handle("/", r)
 
 }

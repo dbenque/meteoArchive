@@ -6,27 +6,28 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/infoclimat"
 	"github.com/dbenque/meteoArchive/meteoAPI"
 )
 
 // Update the list of station for a given country
 func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
-	go func() {
-		defer func() { fmt.Println("UpdateStation from infoclimat completed/ended") }()
+	// go func() {
+	// 	defer func() { fmt.Println("UpdateStation from infoclimat completed/ended") }()
 
-		inputCode := ""
-		if country, ok := r.URL.Query()["country"]; ok {
-			inputCode = country[0]
-		}
+	inputCode := ""
+	if country, ok := r.URL.Query()["country"]; ok {
+		inputCode = country[0]
+	}
 
-		website := infoclimat.InfoClimatWebsite{}
-		serverStorage.Initialize()
-		website.UpdateStations(serverStorage, inputCode)
-		serverStorage.Persist()
-	}()
+	website := infoclimat.InfoClimatWebsite{}
+	serverStorage.Initialize()
+	website.UpdateStations(meteoClient.ClientFactory(r), serverStorage, inputCode)
+	serverStorage.Persist()
+	// }()
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Update Stations on going with Infoclimat website"))
+	w.Write([]byte("Update Stations done"))
 }
 
 // Return the monthly serie for a given location (city/country  or  lon/lat) for a given year
@@ -75,7 +76,7 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
 		// retrieve the serie
 		if serie.GetMeasure(year, time.Month(1)) == nil { // looks like we have no input for that year let's fetch!
-			infoclimat.CompleteMonthlyReports(serie, stationAndDist.station, year)
+			infoclimat.CompleteMonthlyReports(meteoClient.ClientFactory(r), serie, stationAndDist.station, year)
 			serverStorage.PutMonthlyMeasureSerie(stationAndDist.station, serie)
 			serverStorage.Persist()
 		} else { // let's reuse what we have in storage

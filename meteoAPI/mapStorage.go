@@ -56,18 +56,23 @@ func (s *MapStorage) GetMonthlyMeasureSerie(p *Station) *MonthlyMeasureSerie {
 }
 
 //Persist persist to file
-func (s *MapStorage) Persist() {
+func (s *MapStorage) Persist() error {
 	dataj, _ := json.Marshal(*s)
-	ioutil.WriteFile(s.name+".json", dataj, 0644)
+	return ioutil.WriteFile(s.name+".json", dataj, 0644)
 }
 
 //Initialize retrieve from file
-func (s *MapStorage) Initialize() {
+func (s *MapStorage) Initialize() error {
+
+	if len(s.Stations) > 0 {
+		return nil
+	}
+
 	filecontent, err := ioutil.ReadFile(s.name + ".json")
 	if err != nil {
-		return
+		return err
 	}
-	err = json.Unmarshal(filecontent, s)
+	return json.Unmarshal(filecontent, s)
 }
 
 //GetAllStations return all the stations in the storage
