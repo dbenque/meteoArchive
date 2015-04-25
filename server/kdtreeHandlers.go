@@ -2,6 +2,7 @@ package meteoServer
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -112,45 +113,56 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func handleNear(w http.ResponseWriter, r *http.Request) {
+func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []stationAndDistance, err error) {
 
-	var nearStations []stationAndDistance
-
+	// Retrieve the count
 	count, err := readCountFromURL(r)
 	if err != nil {
-		w.Write([]byte(err.Error()))
-		return
+		if defaultCount > 0 {
+			count = defaultCount
+		} else {
+			return
+		}
 	}
 
+	// Retrieve the location
 	var city, country string
 	latitude, longitute, err := readLatitudeLongitudeFromURL(r)
 	if err != nil {
 		err = nil
 		city, country, err = readCityCountryFromURL(r)
 		if err != nil {
-			w.Write([]byte(err.Error()))
 			return
 		}
-		fmt.Println("By Str")
 		nearStations = getNearestByStr(city, country, count)
 
 	} else {
-		fmt.Println("By Coord")
 		nearStations = getNearestByCoord(latitude, longitute, count)
 	}
 
 	if len(nearStations) == 0 {
-		w.Write([]byte("Geolo not found"))
+		err = errors.New("Geolo not found")
 		return
 	}
 
-	output := "Result:\n"
-	for _, s := range nearStations {
-		output = output + "Station at " + strconv.Itoa(int(s.distance)) + " km, " + s.station.Name + "\n"
+	return
+}
+
+func handleNear(w http.ResponseWriter, r *http.Request) {
+
+	if nearStations, err := getNearestFromRequest(r, 3); err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+		return
+	} else {
+
+		output := "Result:\n"
+		for _, s := range nearStations {
+			output = output + "Station at " + strconv.Itoa(int(s.distance)) + " km, " + s.station.Name + "\n"
+		}
+
+		w.Write([]byte(output))
 	}
-
-	w.Write([]byte(output))
-
 }
 
 func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {

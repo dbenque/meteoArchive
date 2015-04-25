@@ -10,6 +10,7 @@ import (
 	"github.com/dbenque/meteoArchive/meteoAPI"
 )
 
+// Update the list of station for a given country
 func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		defer func() { fmt.Println("UpdateStation from infoclimat completed/ended") }()
@@ -28,20 +29,22 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Update Stations on going with Infoclimat website"))
 }
 
-type resultData struct {
-	meteoAPI.POI
-	Km    int                          `json:"km,omitempty"`
-	Serie meteoAPI.MonthlyMeasureSerie `json:"serie,omitempty"`
-}
-
-type resultsByCity struct {
-	Results []resultData `json:"results,omitempty"`
-}
-
+// Return the monthly serie for a given location (city/country  or  lon/lat) for a given year
 func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
-	var nearStations []stationAndDistance
+	// Define type that will be use for the output
+	type resultData struct {
+		meteoAPI.POI
+		Km    int                          `json:"km,omitempty"`
+		Serie meteoAPI.MonthlyMeasureSerie `json:"serie"`
+	}
 
+	// results is a list
+	type resultsByCity struct {
+		Results []resultData `json:"results,omitempty"`
+	}
+
+	// Retrieve the Year for the request [Manadatory]
 	year, err := readYearFromURL(r)
 	if err != nil {
 		w.Write([]byte(err.Error()))
@@ -49,36 +52,29 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	nbResult := 3
-
-	var city, country string
-	latitude, longitute, err := readLatitudeLongitudeFromURL(r)
+	// Retrieve the nearest stations according to request parameters
+	nearStations, err := getNearestFromRequest(r, 3)
 	if err != nil {
-		err = nil
-		city, country, err = readCityCountryFromURL(r)
-		if err != nil {
-			w.Write([]byte(err.Error()))
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		fmt.Println("By Str")
-		nearStations = getNearestByStr(city, country, nbResult)
-
-	} else {
-		fmt.Println("By Coord")
-		nearStations = getNearestByCoord(latitude, longitute, nbResult)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+		return
 	}
 
-	resultsObj := resultsByCity{make([]resultData, nbResult)}
+	// Prepare struct for output
+	resultsObj := resultsByCity{make([]resultData, len(nearStations))}
+
+	// Loop over the retrieved stations to build the result
 	for index, stationAndDist := range nearStations {
 
+		// retrieve the serie from local storage, if none prepare a newserie for fetching
 		serie := serverStorage.GetMonthlyMeasureSerie(stationAndDist.station)
 		if serie == nil { // The Serie for the station does not even exist!
 			newserie := make(meteoAPI.MonthlyMeasureSerie)
 			serie = &newserie
 		}
 
-		if serie.GetMeasure(year, time.Month(1)) == nil { // looks like we have no input for that year ...
+		// retrieve the serie
+		if serie.GetMeasure(year, time.Month(1)) == nil { // looks like we have no input for that year let's fetch!
 			infoclimat.CompleteMonthlyReports(serie, stationAndDist.station, year)
 			serverStorage.PutMonthlyMeasureSerie(stationAndDist.station, serie)
 			serverStorage.Persist()
@@ -86,7 +82,7 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Serie retrieved from storage")
 		}
 
-		resultsObj.Results[index] = resultData{stationAndDist.station.POI, int(stationAndDist.distance), *serie}
+		resultsObj.Results[index] = resultData{stationAndDist.station.POI, int(stationAndDist.distance), serie.GetSerieIndexedByMonth(year)}
 	}
 
 	dataj, _ := json.Marshal(resultsObj)

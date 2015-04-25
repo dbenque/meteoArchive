@@ -90,18 +90,16 @@ type Measure struct {
 	SunHours        *float64 `json:"s,omitempty"`
 }
 
-//MonthlyMeasureSerie Represent erie of measure indexed by Months
-type MonthlyMeasureSerie map[string]Measure // index computed as Year*100+Month
-
-// type MonthlyMeasureSerieAtDistance struct {
-// 	Distance            *float64 `json:"km"`
-// 	MonthlyMeasureSerie serie
-// }
-//
-// //Object to be serialized to output result of monthly series for stations
-// type MonthlyMeasureSerieForPOIs map[POI]MonthlyMeasureSerieAtDistance
+//MonthlyMeasureSerie Represent serie of measure indexed by Months
+type MonthlyMeasureSerie map[string]Measure // index computed thanks to func getMeasureIndex
 
 //----------------------------- Methods and helpers for measure ---------------------------
+
+//IsEmpty check that at least one value of the measure is valid
+func (m *Measure) IsEmpty() bool {
+	return (m.ExtremeMin == nil && m.AverageMin == nil && m.Average == nil && m.AverageMax == nil && m.ExtremeMax == nil && m.WhaterMilimeter == nil && m.SunHours == nil)
+}
+
 func (m *Measure) mergeMeasures(source *Measure) {
 
 	if source == nil || m == nil {
@@ -156,9 +154,21 @@ func (s *MonthlyMeasureSerie) GetMeasure(year int, month time.Month) *Measure {
 	data, found := (*s)[index]
 	if !found {
 		return nil
-	} else {
-		return &data
 	}
+	return &data
+
+}
+
+//GetSerieIndexedByMonth returns the serie index by month only and with empty values purged
+func (s *MonthlyMeasureSerie) GetSerieIndexedByMonth(year int) MonthlyMeasureSerie {
+	outputSerie := make(MonthlyMeasureSerie)
+	for i := 1; i <= 12; i++ {
+		if m := s.GetMeasure(year, time.Month(i)); m != nil && !m.IsEmpty() {
+			// Only use the month as index
+			outputSerie[strconv.Itoa(i)] = *m
+		}
+	}
+	return outputSerie
 }
 
 //================= Storage ============

@@ -2,14 +2,13 @@ package meteoServer
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
 )
 
 func readCountFromURL(r *http.Request) (count int, err error) {
-	count = 4
+	count = 3
 	if counturl, ok := r.URL.Query()["count"]; ok {
 		if count, err = strconv.Atoi(counturl[0]); err != nil {
 			err = errors.New("count parameter is not an int")
@@ -50,7 +49,6 @@ func readLatitudeLongitudeFromURL(r *http.Request) (lat, lon float64, err error)
 				return
 			}
 		} else {
-			fmt.Println("Missing Longitude")
 			err = errors.New("Missing Longitude")
 			return
 		}
@@ -58,7 +56,6 @@ func readLatitudeLongitudeFromURL(r *http.Request) (lat, lon float64, err error)
 		return
 	}
 
-	fmt.Println("Missing Latitude")
 	err = errors.New("missing Latitude")
 	return
 
