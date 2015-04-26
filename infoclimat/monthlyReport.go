@@ -1,15 +1,14 @@
 package infoclimat
 
 import (
-	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -62,7 +61,7 @@ var mapRowTitleToFieldName = map[string]string{
 }
 
 //CompleteMonthlyReports go to infoclimat website and get the monthly report and complete the given serie
-func CompleteMonthlyReports(getter meteoClient.URLGetter, serie *meteoAPI.MonthlyMeasureSerie, station *meteoAPI.Station, year int) {
+func CompleteMonthlyReports(res *resource.ResourceInstances, serie *meteoAPI.MonthlyMeasureSerie, station *meteoAPI.Station, year int) {
 	// infoclimat.fr/climatologie/anne/2014/{city}/valeurs/{id}.html
 
 	// Check if that station is from Infoclimat
@@ -72,7 +71,7 @@ func CompleteMonthlyReports(getter meteoClient.URLGetter, serie *meteoAPI.Monthl
 
 	// Check if that station is from Infoclimat
 	if serie == nil {
-		fmt.Println("CompleteMonthlyReports: nil serie as input!")
+		res.Logger().Errorf("CompleteMonthlyReports: nil serie as input!")
 		return
 	}
 
@@ -80,14 +79,14 @@ func CompleteMonthlyReports(getter meteoClient.URLGetter, serie *meteoAPI.Monthl
 	url := "http://www.infoclimat.fr/climatologie/annee/" + strconv.Itoa(year) + "/" + station.RemoteMetadata["path"].(string) + "/valeurs/" + station.RemoteID + ".html"
 
 	// get html document
-	doc, err := meteoClient.GetGoqueryDocument(getter, url)
+	doc, err := resource.GetGoqueryDocument(res.Client(), url)
 	if err != nil {
-		fmt.Println(err)
+		res.Logger().Errorf(err.Error())
 		return
 	}
 
 	// log
-	fmt.Println("RetrieveMonthlyReports: ", url)
+	res.Logger().Infof("RetrieveMonthlyReports: ", url)
 
 	// initialize empty measure
 	emptyMeasure := new(meteoAPI.Measure)
@@ -122,14 +121,14 @@ func CompleteMonthlyReports(getter meteoClient.URLGetter, serie *meteoAPI.Monthl
 							serie.PutMeasure(m, year, time.Month(i))
 						} else {
 							if len((*s).Text()) > 0 {
-								fmt.Print("can decode value (skip):", (*s).Text())
+								res.Logger().Warningf("can decode value (skip): %s", (*s).Text())
 							}
 						}
 
 					}
 				}
 			} else {
-				fmt.Println("Unknow measure(skip):", cells.First().Text())
+				res.Logger().Warningf("Unknow measure(skip): %s", cells.First().Text())
 			}
 		})
 	})

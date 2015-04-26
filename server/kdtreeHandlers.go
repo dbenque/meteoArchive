@@ -3,14 +3,13 @@ package meteoServer
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"net/http"
 	"strconv"
 
-	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/geoloc"
 	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 
 	"code.google.com/p/biogo.store/kdtree"
 )
@@ -20,9 +19,9 @@ type stationAndDistance struct {
 	distance float64
 }
 
-func getNearestByStr(client meteoClient.URLGetter, city string, country string, count int) (nearStations []stationAndDistance) {
+func getNearestByStr(res *resource.ResourceInstances, city string, country string, count int) (nearStations []stationAndDistance) {
 
-	poi, err := geoloc.FromCity(client, city, country, "fr")
+	poi, err := geoloc.FromCity(res, city, country, "fr")
 	if err != nil {
 		return
 	}
@@ -55,6 +54,8 @@ func getNearest(poi meteoAPI.POI, count int) (nearStations []stationAndDistance)
 
 func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
 
+	res := resource.NewResources(r)
+
 	city, country, err := readCityCountryFromURL(r)
 	if err != nil {
 		w.Write([]byte(err.Error()))
@@ -62,7 +63,7 @@ func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	poi, err := geoloc.FromCity(meteoClient.ClientFactory(r), city, country, "fr")
+	poi, err := geoloc.FromCity(res, city, country, "fr")
 	if err != nil {
 		w.Write([]byte(err.Error()))
 		w.WriteHeader(http.StatusNotFound)
@@ -78,6 +79,8 @@ func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
 
 func handleDistance(w http.ResponseWriter, r *http.Request) {
 
+	res := resource.NewResources(r)
+
 	w.Write([]byte("Distance"))
 
 	city, country, err := readCityCountryFromURL(r)
@@ -86,7 +89,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	poi, err := geoloc.FromCity(meteoClient.ClientFactory(r), city, country, "fr")
+	poi, err := geoloc.FromCity(res, city, country, "fr")
 	if err != nil {
 		w.Write([]byte("Geolo not found"))
 		return
@@ -117,6 +120,8 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 
 func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []stationAndDistance, err error) {
 
+	res := resource.NewResources(r)
+
 	// Retrieve the count
 	count, err := readCountFromURL(r)
 	if err != nil {
@@ -136,7 +141,7 @@ func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []st
 		if err != nil {
 			return
 		}
-		nearStations = getNearestByStr(meteoClient.ClientFactory(r), city, country, count)
+		nearStations = getNearestByStr(res, city, country, count)
 
 	} else {
 		nearStations = getNearestByCoord(latitude, longitute, count)
@@ -173,13 +178,15 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
 	//		defer func() { fmt.Println("Update kdtree completed/ended") }()
 
+	res := resource.NewResources(r)
+
 	if err := serverStorage.Initialize(); err != nil {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(err.Error()))
 		return
 	}
 	stations := serverStorage.GetAllStations()
-	fmt.Println("Station Count:", len(*stations))
+	res.Logger().Infof("Loading KDTree with %d stations", len(*stations))
 
 	kdtreeOfStation = kdtree.New(stations, true)
 	//	}()

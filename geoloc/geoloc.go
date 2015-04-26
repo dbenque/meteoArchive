@@ -5,8 +5,8 @@ import (
 	"errors"
 	"io/ioutil"
 
-	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 //FromCity retrieve the longitude latitude via google API https://developers.google.com/maps/documentation/geocoding/index
-func FromCity(getter meteoClient.URLGetter, city string, region string, language string) (poi meteoAPI.POI, err error) {
+func FromCity(res *resource.ResourceInstances, city string, region string, language string) (poi meteoAPI.POI, err error) {
 
 	url := googleAPIURL + "key=" + googleAPIKey + "&address=" + city + "&region=" + region + "&language=" + language
 
@@ -27,7 +27,7 @@ func FromCity(getter meteoClient.URLGetter, city string, region string, language
 	// }
 	// response.Body.Close()
 
-	response, err := getter.Get(url)
+	response, err := res.Client().Get(url)
 	defer response.Body.Close()
 
 	responseStr, err := ioutil.ReadAll(response.Body)

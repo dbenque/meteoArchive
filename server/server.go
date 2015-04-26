@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"code.google.com/p/biogo.store/kdtree"
-	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/meteoAPI"
 
 	"github.com/gorilla/mux"
@@ -22,9 +21,8 @@ var kdtreeOfStation *kdtree.Tree
 var serverStorage meteoAPI.Storage
 
 //Serve serve rest API to work on station and meteo measure
-func ApplyHttpHandler(storage meteoAPI.Storage, clientFactory meteoClient.URLGetterFactory) {
+func ApplyHttpHandler(storage meteoAPI.Storage) {
 
-	meteoClient.ClientFactory = clientFactory
 	serverStorage = storage
 	serverStorage.Initialize()
 	stations := serverStorage.GetAllStations()

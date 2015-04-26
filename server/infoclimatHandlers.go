@@ -2,13 +2,12 @@ package meteoServer
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/dbenque/meteoArchive/client"
 	"github.com/dbenque/meteoArchive/infoclimat"
 	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 )
 
 // Update the list of station for a given country
@@ -21,10 +20,14 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 		inputCode = country[0]
 	}
 
+	res := resource.NewResources(r)
+	res.Logger().Infof("Updating stations for country %s. On going ...", inputCode)
+
 	website := infoclimat.InfoClimatWebsite{}
 	serverStorage.Initialize()
-	website.UpdateStations(meteoClient.ClientFactory(r), serverStorage, inputCode)
+	website.UpdateStations(res, serverStorage, inputCode)
 	serverStorage.Persist()
+	res.Logger().Infof("Stations updated for country %s. Completed", inputCode)
 	// }()
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Update Stations done"))
@@ -32,6 +35,8 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 
 // Return the monthly serie for a given location (city/country  or  lon/lat) for a given year
 func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
+
+	res := resource.NewResources(r)
 
 	// Define type that will be use for the output
 	type resultData struct {
@@ -76,11 +81,11 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
 		// retrieve the serie
 		if serie.GetMeasure(year, time.Month(1)) == nil { // looks like we have no input for that year let's fetch!
-			infoclimat.CompleteMonthlyReports(meteoClient.ClientFactory(r), serie, stationAndDist.station, year)
+			infoclimat.CompleteMonthlyReports(res, serie, stationAndDist.station, year)
 			serverStorage.PutMonthlyMeasureSerie(stationAndDist.station, serie)
 			serverStorage.Persist()
 		} else { // let's reuse what we have in storage
-			fmt.Println("Serie retrieved from storage")
+			res.Logger().Debugf("Monthly serie retrieved from storage")
 		}
 
 		resultsObj.Results[index] = resultData{stationAndDist.station.POI, int(stationAndDist.distance), serie.GetSerieIndexedByMonth(year)}

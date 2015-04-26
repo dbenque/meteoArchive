@@ -2,13 +2,11 @@ package infoclimat
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
-	"strconv"
 
-	"github.com/dbenque/meteoArchive/client"
 	api "github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -21,9 +19,9 @@ const (
 type InfoClimatWebsite struct {
 }
 
-func getCountry(getter meteoClient.URLGetter) map[string]string {
+func getCountry(res *resource.ResourceInstances) map[string]string {
 
-	doc, err := meteoClient.GetGoqueryDocument(getter, "http://www.infoclimat.fr/observations-meteo/temps-reel/bac-can/48810.html")
+	doc, err := resource.GetGoqueryDocument(res.Client(), "http://www.infoclimat.fr/observations-meteo/temps-reel/bac-can/48810.html")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -43,13 +41,12 @@ func getCountry(getter meteoClient.URLGetter) map[string]string {
 	return result
 }
 
-func getCities(getter meteoClient.URLGetter, countryCode string, storage *api.Storage) int {
+func getCities(res *resource.ResourceInstances, countryCode string, storage *api.Storage) int {
 
 	url := "http://www.infoclimat.fr/stations-meteo/cache/select/_" + countryCode + ".html"
-	doc, err := meteoClient.GetGoqueryDocument(getter, url)
+	doc, err := resource.GetGoqueryDocument(res.Client(), url)
 	if err != nil {
-		fmt.Println(err)
-		log.Fatal(err)
+		res.Logger().Errorf(err.Error())
 	}
 
 	count := 0
@@ -60,7 +57,7 @@ func getCities(getter meteoClient.URLGetter, countryCode string, storage *api.St
 		stationPath, found2 := option.Attr("data-seo")
 
 		if found1 && found2 {
-			getStation(getter, stationID, stationPath, storage)
+			getStation(res, stationID, stationPath, storage)
 			count++
 		}
 	})
@@ -69,11 +66,11 @@ func getCities(getter meteoClient.URLGetter, countryCode string, storage *api.St
 
 }
 
-func getStation(getter meteoClient.URLGetter, stationID string, stationPath string, storage *api.Storage) {
+func getStation(res *resource.ResourceInstances, stationID string, stationPath string, storage *api.Storage) {
 
 	url := "http://www.infoclimat.fr/include/ajax/stations.php?q=" + stationID
 
-	response, err := getter.Get(url)
+	response, err := res.Client().Get(url)
 	defer response.Body.Close()
 
 	responseStr, err := ioutil.ReadAll(response.Body)
@@ -113,16 +110,16 @@ func getStation(getter meteoClient.URLGetter, stationID string, stationPath stri
 }
 
 //UpdateStations update the given storage with the Infoclimat website's stations
-func (website *InfoClimatWebsite) UpdateStations(getter meteoClient.URLGetter, s api.Storage, inputCountryCode string) {
+func (website *InfoClimatWebsite) UpdateStations(res *resource.ResourceInstances, s api.Storage, inputCountryCode string) {
 
-	for code, country := range getCountry(getter) {
+	for code, country := range getCountry(res) {
 
 		if len(inputCountryCode) > 0 && inputCountryCode != code {
 			continue
 		}
-		fmt.Print("[" + code + "] ")
-		count := getCities(getter, code, &s)
-		fmt.Println("Country:" + country + ", adding " + strconv.Itoa(count))
+		res.Logger().Infof("[%s] grab stations on going...", code)
+		count := getCities(res, code, &s)
+		res.Logger().Infof("[%s] Country: %s, adding %d", code, country, count)
 
 	}
 
