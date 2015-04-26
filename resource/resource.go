@@ -56,11 +56,19 @@ type Logger interface {
 // Factory Function for client
 type LoggerFactory func(c interface{}) (Logger, error)
 
+//------------- Storage
+
+type Storage interface {
+}
+
+type StorageFactory func(c interface{}) (Storage, error)
+
 //------------- Resource Factories
 
 type ResourceFactory struct {
-	Client URLGetterFactory
-	Logger LoggerFactory
+	Client  URLGetterFactory
+	Logger  LoggerFactory
+	Storage StorageFactory
 }
 
 var ResourceFactoryInstance ResourceFactory
@@ -71,6 +79,7 @@ type ResourceInstances struct {
 	context   interface{}
 	logger    Logger
 	urlGetter URLGetter
+	storage   Storage
 }
 
 func NewResources(context interface{}) *ResourceInstances {
@@ -99,4 +108,15 @@ func (r *ResourceInstances) Client() URLGetter {
 		}
 	}
 	return r.urlGetter
+}
+
+func (r *ResourceInstances) Storage() Storage {
+	if r.storage == nil {
+		if l, err := ResourceFactoryInstance.Storage(r.context); err == nil {
+			r.storage = l
+		} else {
+			return nil
+		}
+	}
+	return r.storage
 }

@@ -25,6 +25,6 @@ http://127.0.0.1:8080/infoclimat/getMonthlySerie?lon=7.296262&lat=48.018517&year
 TODO
 ====
 
-- do the storage on datastore
+- change the type of station Metadata for datastore compliancy
 - do the appengine module
 - create a job to feed db for one year or for one station

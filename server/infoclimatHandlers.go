@@ -24,9 +24,9 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 	res.Logger().Infof("Updating stations for country %s. On going ...", inputCode)
 
 	website := infoclimat.InfoClimatWebsite{}
-	serverStorage.Initialize()
-	website.UpdateStations(res, serverStorage, inputCode)
-	serverStorage.Persist()
+	GetServerStorage(r).Initialize()
+	website.UpdateStations(res, GetServerStorage(r), inputCode)
+	GetServerStorage(r).Persist()
 	res.Logger().Infof("Stations updated for country %s. Completed", inputCode)
 	// }()
 	w.WriteHeader(http.StatusOK)
@@ -73,7 +73,7 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 	for index, stationAndDist := range nearStations {
 
 		// retrieve the serie from local storage, if none prepare a newserie for fetching
-		serie := serverStorage.GetMonthlyMeasureSerie(stationAndDist.station)
+		serie := GetServerStorage(r).GetMonthlyMeasureSerie(stationAndDist.station)
 		if serie == nil { // The Serie for the station does not even exist!
 			newserie := make(meteoAPI.MonthlyMeasureSerie)
 			serie = &newserie
@@ -82,8 +82,8 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 		// retrieve the serie
 		if serie.GetMeasure(year, time.Month(1)) == nil { // looks like we have no input for that year let's fetch!
 			infoclimat.CompleteMonthlyReports(res, serie, stationAndDist.station, year)
-			serverStorage.PutMonthlyMeasureSerie(stationAndDist.station, serie)
-			serverStorage.Persist()
+			GetServerStorage(r).PutMonthlyMeasureSerie(stationAndDist.station, serie)
+			GetServerStorage(r).Persist()
 		} else { // let's reuse what we have in storage
 			res.Logger().Debugf("Monthly serie retrieved from storage")
 		}

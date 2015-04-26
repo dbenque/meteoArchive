@@ -8,9 +8,10 @@ import (
 
 // ------------------ Math for Longitude/Latitude to x,y,z coordinates --------------------
 const (
-	rayonTerre = 6371.0
-	coordDim   = 3
-	piOn180    = math.Pi / 180.
+	rayonTerre  = 6371.0
+	coordDim    = 3
+	piOn180     = math.Pi / 180.
+	StationKind = "station"
 )
 
 func toRad(d float64) float64 {
@@ -32,12 +33,12 @@ func (poi *POI) getCoord() [coordDim]float64 {
 
 // POI point of interest
 type POI struct {
-	Name        string  `json:"name,omitempty"`
-	Altitude    float64 `json:"alt,omitempty"`
-	Latitude    float64 `json:"lat,omitempty"`
-	Longitude   float64 `json:"lon,omitempty"`
-	coord       [coordDim]float64
-	coordCached bool
+	Name        string            `json:"name,omitempty"`
+	Altitude    float64           `json:"alt,omitempty"`
+	Latitude    float64           `json:"lat,omitempty"`
+	Longitude   float64           `json:"lon,omitempty"`
+	coord       [coordDim]float64 `datastore:"-"`
+	coordCached bool              `datastore:"-"`
 }
 
 // Station meteo station information
@@ -45,7 +46,7 @@ type Station struct {
 	POI
 	Origin         string
 	RemoteID       string
-	RemoteMetadata map[string]interface{}
+	RemoteMetadata map[string]interface{} `datastore:"-"`
 }
 
 // Stations collection of stations
@@ -55,7 +56,17 @@ type Stations []Station
 
 //GetKey return a unique identifier for the station
 func (p *Station) GetKey() string {
-	return p.Origin + "." + p.RemoteID
+	return BuildStationKey(p.Origin, p.RemoteID)
+}
+
+//GetKey return a unique identifier for the station
+func BuildStationKey(origin string, remoteId string) string {
+	return origin + ":" + remoteId
+}
+
+//GetKey return a unique identifier for the station
+func (p *Station) GetKind() string {
+	return StationKind
 }
 
 //PutMetadata insert/modify a Metadata
@@ -176,12 +187,12 @@ func (s *MonthlyMeasureSerie) GetSerieIndexedByMonth(year int) MonthlyMeasureSer
 //Storage interface toward storage
 type Storage interface {
 	PutStation(p *Station) error
-	GetStation(key string) *Station
+	GetStation(origin string, remoteId string) *Station
 	PutMonthlyMeasureSerie(p *Station, measures *MonthlyMeasureSerie) error
 	GetMonthlyMeasureSerie(p *Station) *MonthlyMeasureSerie
 	Persist() error
 	Initialize() error
-	GetAllStations() *Stations
+	GetAllStations() (*Stations, error)
 }
 
 //================= Web Grabber Interface ==

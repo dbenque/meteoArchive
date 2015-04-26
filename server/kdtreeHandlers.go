@@ -180,12 +180,18 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 
 	res := resource.NewResources(r)
 
-	if err := serverStorage.Initialize(); err != nil {
+	if err := GetServerStorage(r).Initialize(); err != nil {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(err.Error()))
 		return
 	}
-	stations := serverStorage.GetAllStations()
+	stations, err := GetServerStorage(r).GetAllStations()
+	if err != nil {
+		res.Logger().Errorf("Fail to load all stations from the store: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Update for kdtree failed"))
+		return
+	}
 	res.Logger().Infof("Loading KDTree with %d stations", len(*stations))
 
 	kdtreeOfStation = kdtree.New(stations, true)

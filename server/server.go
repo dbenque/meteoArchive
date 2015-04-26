@@ -5,8 +5,9 @@ import (
 	"net/http"
 
 	"code.google.com/p/biogo.store/kdtree"
-	"github.com/dbenque/meteoArchive/meteoAPI"
 
+	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/resource"
 	"github.com/gorilla/mux"
 )
 
@@ -18,15 +19,20 @@ func serveError(w http.ResponseWriter, err error) {
 
 // Server Global Variable
 var kdtreeOfStation *kdtree.Tree
-var serverStorage meteoAPI.Storage
+
+func GetServerStorage(c interface{}) meteoAPI.Storage {
+	res := resource.NewResources(c)
+	si := res.Storage()
+	return si.(meteoAPI.Storage)
+}
 
 //Serve serve rest API to work on station and meteo measure
-func ApplyHttpHandler(storage meteoAPI.Storage) {
+func ApplyHttpHandler() {
 
-	serverStorage = storage
-	serverStorage.Initialize()
-	stations := serverStorage.GetAllStations()
-	kdtreeOfStation = kdtree.New(stations, true)
+	// serverStorage = storage
+	// serverStorage.Initialize()
+	// stations, _ := serverStorage.GetAllStations()
+	// kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/meteo/geoloc", handleGetGeoloc)

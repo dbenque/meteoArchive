@@ -3,7 +3,7 @@ package moduleMeteo
 import (
 	"errors"
 
-	"github.com/dbenque/meteoArchive/meteoAPI"
+	"github.com/dbenque/meteoArchive/appengineStorage"
 	"github.com/dbenque/meteoArchive/resource"
 	"github.com/dbenque/meteoArchive/server"
 
@@ -36,11 +36,24 @@ func createAppengineLogger(r interface{}) (resource.Logger, error) {
 
 }
 
+func createAppengineStorage(r interface{}) (resource.Storage, error) {
+	switch r.(type) {
+	default:
+		return nil, errors.New("Can't create appengine Storage from that interface type")
+	case *http.Request:
+		return appengineStorage.NewAppengineStorage(appengine.NewContext(r.(*http.Request))), nil
+	case appengine.Context:
+		return appengineStorage.NewAppengineStorage(r.(appengine.Context)), nil
+	}
+
+}
+
 func init() {
 
 	resource.ResourceFactoryInstance.Client = createAppengineURLFetcher
 	resource.ResourceFactoryInstance.Logger = createAppengineLogger
+	resource.ResourceFactoryInstance.Storage = createAppengineStorage
 	// setup http handler using local storage
-	meteoServer.ApplyHttpHandler(meteoAPI.NewMapStorage("mapStorage"))
+	meteoServer.ApplyHttpHandler()
 
 }

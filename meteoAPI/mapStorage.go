@@ -29,8 +29,8 @@ func (s *MapStorage) PutStation(p *Station) error {
 }
 
 //GetStation get a station from the mapStore
-func (s *MapStorage) GetStation(key string) *Station {
-	sta, found := s.Stations[key]
+func (s *MapStorage) GetStation(origin string, remoteId string) *Station {
+	sta, found := s.Stations[BuildStationKey(origin, remoteId)]
 	if !found {
 		return nil
 	}
@@ -76,7 +76,7 @@ func (s *MapStorage) Initialize() error {
 }
 
 //GetAllStations return all the stations in the storage
-func (s *MapStorage) GetAllStations() *Stations {
+func (s *MapStorage) GetAllStations() (*Stations, error) {
 
 	result := make(Stations, len(s.Stations), len(s.Stations))
 
@@ -85,5 +85,5 @@ func (s *MapStorage) GetAllStations() *Stations {
 		result[i] = v
 		i++
 	}
-	return &result
+	return &result, nil
 }
