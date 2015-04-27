@@ -172,30 +172,42 @@ func handleNear(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
-
-	//	go func() {
-
-	//		defer func() { fmt.Println("Update kdtree completed/ended") }()
-
-	res := resource.NewResources(r)
-
-	if err := GetServerStorage(r).Initialize(); err != nil {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(err.Error()))
-		return
+func ensureKdtreeLoaded(res *resource.ResourceInstances) error {
+	if kdtreeOfStation == nil {
+		return kdtreeReload(res)
 	}
-	stations, err := GetServerStorage(r).GetAllStations()
+
+	return nil
+}
+
+func kdtreeReload(res *resource.ResourceInstances) error {
+
+	if err := GetServerStorage(res.Context).Initialize(); err != nil {
+		return err
+	}
+
+	stations, err := GetServerStorage(res.Context).GetAllStations()
 	if err != nil {
 		res.Logger().Errorf("Fail to load all stations from the store: %s", err.Error())
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Update for kdtree failed"))
-		return
+		return err
 	}
 	res.Logger().Infof("Loading KDTree with %d stations", len(*stations))
 
 	kdtreeOfStation = kdtree.New(stations, true)
-	//	}()
+
+	return nil
+}
+
+func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
+
+	res := resource.NewResources(r)
+
+	if err := kdtreeReload(res); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Update on going for kdtree"))
 }

@@ -76,7 +76,7 @@ var ResourceFactoryInstance ResourceFactory
 //-------------- Resource Instances
 
 type ResourceInstances struct {
-	context   interface{}
+	Context   interface{}
 	logger    Logger
 	urlGetter URLGetter
 	storage   Storage
@@ -84,13 +84,13 @@ type ResourceInstances struct {
 
 func NewResources(context interface{}) *ResourceInstances {
 	ri := ResourceInstances{}
-	ri.context = context
+	ri.Context = context
 	return &ri
 }
 
 func (r *ResourceInstances) Logger() Logger {
 	if r.logger == nil {
-		if l, err := ResourceFactoryInstance.Logger(r.context); err == nil {
+		if l, err := ResourceFactoryInstance.Logger(r.Context); err == nil {
 			r.logger = l
 		} else {
 			return nil
@@ -101,7 +101,7 @@ func (r *ResourceInstances) Logger() Logger {
 
 func (r *ResourceInstances) Client() URLGetter {
 	if r.urlGetter == nil {
-		if l, err := ResourceFactoryInstance.Client(r.context); err == nil {
+		if l, err := ResourceFactoryInstance.Client(r.Context); err == nil {
 			r.urlGetter = l
 		} else {
 			return nil
@@ -112,7 +112,7 @@ func (r *ResourceInstances) Client() URLGetter {
 
 func (r *ResourceInstances) Storage() Storage {
 	if r.storage == nil {
-		if l, err := ResourceFactoryInstance.Storage(r.context); err == nil {
+		if l, err := ResourceFactoryInstance.Storage(r.Context); err == nil {
 			r.storage = l
 		} else {
 			return nil

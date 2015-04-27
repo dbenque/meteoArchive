@@ -37,6 +37,7 @@ func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
 func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 
 	res := resource.NewResources(r)
+	ensureKdtreeLoaded(res)
 
 	// Define type that will be use for the output
 	type resultData struct {
