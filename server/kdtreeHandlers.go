@@ -11,9 +11,10 @@ import (
 	"github.com/dbenque/meteoArchive/meteoAPI"
 	"github.com/dbenque/meteoArchive/resource"
 
-	"code.google.com/p/biogo.store/kdtree"
+	"github.com/biogo/store/kdtree"
 )
 
+//"code.google.com/p/biogo.store/kdtree"
 type stationAndDistance struct {
 	station  *meteoAPI.Station
 	distance float64
@@ -80,6 +81,7 @@ func handleGetGeoloc(w http.ResponseWriter, r *http.Request) {
 func handleDistance(w http.ResponseWriter, r *http.Request) {
 
 	res := resource.NewResources(r)
+	ensureKdtreeLoaded(res)
 
 	w.Write([]byte("Distance"))
 
@@ -121,6 +123,7 @@ func handleDistance(w http.ResponseWriter, r *http.Request) {
 func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []stationAndDistance, err error) {
 
 	res := resource.NewResources(r)
+	ensureKdtreeLoaded(res)
 
 	// Retrieve the count
 	count, err := readCountFromURL(r)
@@ -157,6 +160,9 @@ func getNearestFromRequest(r *http.Request, defaultCount int) (nearStations []st
 
 func handleNear(w http.ResponseWriter, r *http.Request) {
 
+	res := resource.NewResources(r)
+	ensureKdtreeLoaded(res)
+
 	if nearStations, err := getNearestFromRequest(r, 3); err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
@@ -176,7 +182,6 @@ func ensureKdtreeLoaded(res *resource.ResourceInstances) error {
 	if kdtreeOfStation == nil {
 		return kdtreeReload(res)
 	}
-
 	return nil
 }
 

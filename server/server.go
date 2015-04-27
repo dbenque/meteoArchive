@@ -4,7 +4,8 @@ import (
 	"io"
 	"net/http"
 
-	"code.google.com/p/biogo.store/kdtree"
+	"github.com/biogo/store/kdtree"
+	//"code.google.com/p/biogo.store/kdtree"
 
 	"github.com/dbenque/meteoArchive/meteoAPI"
 	"github.com/dbenque/meteoArchive/resource"

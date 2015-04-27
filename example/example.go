@@ -6,7 +6,8 @@ import (
 	"meteo/meteoAPI"
 	"reflect"
 
-	"code.google.com/p/biogo.store/kdtree"
+	"github.com/biogo/store/kdtree"
+	//"code.google.com/p/biogo.store/kdtree"
 )
 
 func Example() {

@@ -9,7 +9,7 @@ import (
 	"math"
 	"testing"
 
-	"code.google.com/p/biogo.store/kdtree"
+	"github.com/biogo/store/kdtree"
 )
 
 var (
