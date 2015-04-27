@@ -32,7 +32,7 @@ func ApplyHttpHandler() {
 	// serverStorage = storage
 	// serverStorage.Initialize()
 	// stations, _ := serverStorage.GetAllStations()
-	// kdtreeOfStation = kdtree.New(stations, true)
+	//kdtreeOfStation = kdtree.New(stations, true)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/meteo/geoloc", handleGetGeoloc)

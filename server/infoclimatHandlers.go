@@ -77,6 +77,7 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 		if serie == nil { // The Serie for the station does not even exist!
 			newserie := make(meteoAPI.MonthlyMeasureSerie)
 			serie = &newserie
+			res.Logger().Infof("Creating New Serie")
 		}
 
 		// retrieve the serie
@@ -85,7 +86,7 @@ func handleInfoclimatGetMonthlySerie(w http.ResponseWriter, r *http.Request) {
 			GetServerStorage(r).PutMonthlyMeasureSerie(stationAndDist.station, serie)
 			GetServerStorage(r).Persist()
 		} else { // let's reuse what we have in storage
-			res.Logger().Debugf("Monthly serie retrieved from storage")
+			res.Logger().Infof("Monthly serie retrieved from storage")
 		}
 
 		resultsObj.Results[index] = resultData{stationAndDist.station.POI, int(stationAndDist.distance), serie.GetSerieIndexedByMonth(year)}

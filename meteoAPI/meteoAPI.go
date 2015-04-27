@@ -1,6 +1,7 @@
 package meteoAPI
 
 import (
+	"encoding/json"
 	"math"
 	"strconv"
 	"time"
@@ -8,10 +9,11 @@ import (
 
 // ------------------ Math for Longitude/Latitude to x,y,z coordinates --------------------
 const (
-	rayonTerre  = 6371.0
-	coordDim    = 3
-	piOn180     = math.Pi / 180.
-	StationKind = "station"
+	rayonTerre       = 6371.0
+	coordDim         = 3
+	piOn180          = math.Pi / 180.
+	StationKind      = "station"
+	MonthlySerieKind = "monthlySerie"
 )
 
 func toRad(d float64) float64 {
@@ -44,9 +46,10 @@ type POI struct {
 // Station meteo station information
 type Station struct {
 	POI
-	Origin         string
-	RemoteID       string
-	RemoteMetadata map[string]interface{} `datastore:"-"`
+	Origin          string
+	RemoteID        string
+	remoteMetadata  map[string]interface{} `datastore:"-"`
+	MetadataInStore string                 `datastore:"metedata,noindex"` // Public for datastore access. Don't play wit hthe value!
 }
 
 // Stations collection of stations
@@ -71,20 +74,34 @@ func (p *Station) GetKind() string {
 
 //PutMetadata insert/modify a Metadata
 func (p *Station) PutMetadata(key string, value interface{}) {
-	if p.RemoteMetadata == nil {
-		p.RemoteMetadata = make(map[string]interface{})
+	if p.remoteMetadata == nil {
+		p.remoteMetadata = make(map[string]interface{})
 	}
-	p.RemoteMetadata[key] = value
+	p.remoteMetadata[key] = value
+	dataj, _ := json.Marshal(p.remoteMetadata)
+	p.MetadataInStore = string(dataj)
+}
+
+//PutMetadata insert/modify a Metadata
+func (p *Station) GetMetadata(key string) interface{} {
+	if p.remoteMetadata == nil {
+		if len(p.MetadataInStore) == 0 {
+			return nil
+		}
+		json.Unmarshal([]byte(p.MetadataInStore), &(p.remoteMetadata))
+	}
+
+	return p.remoteMetadata[key]
 }
 
 // NewStation constructor for station
 func NewStation(name string, alt, lat, lng float64) *Station {
-	return &Station{POI{name, alt, lat, lng, [...]float64{0., 0., 0.}, false}, "", "", nil}
+	return &Station{POI{name, alt, lat, lng, [...]float64{0., 0., 0.}, false}, "", "", nil, ""}
 }
 
 // NewStationFromPOI constructor for station based on POI
 func NewStationFromPOI(poi POI) *Station {
-	return &Station{poi, "", "", nil}
+	return &Station{poi, "", "", nil, ""}
 }
 
 // ======================= Measures structure ==========================

@@ -76,7 +76,7 @@ func CompleteMonthlyReports(res *resource.ResourceInstances, serie *meteoAPI.Mon
 	}
 
 	// format url toward the monthly report for the year
-	url := "http://www.infoclimat.fr/climatologie/annee/" + strconv.Itoa(year) + "/" + station.RemoteMetadata["path"].(string) + "/valeurs/" + station.RemoteID + ".html"
+	url := "http://www.infoclimat.fr/climatologie/annee/" + strconv.Itoa(year) + "/" + station.GetMetadata("path").(string) + "/valeurs/" + station.RemoteID + ".html"
 
 	// get html document
 	doc, err := resource.GetGoqueryDocument(res.Client(), url)
@@ -86,7 +86,7 @@ func CompleteMonthlyReports(res *resource.ResourceInstances, serie *meteoAPI.Mon
 	}
 
 	// log
-	res.Logger().Infof("RetrieveMonthlyReports: ", url)
+	res.Logger().Infof("RetrieveMonthlyReports: %s", url)
 
 	// initialize empty measure
 	emptyMeasure := new(meteoAPI.Measure)
