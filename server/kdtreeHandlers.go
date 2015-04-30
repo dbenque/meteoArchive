@@ -208,11 +208,23 @@ func handleKDTreeReload(w http.ResponseWriter, r *http.Request) {
 	res := resource.NewResources(r)
 
 	if err := kdtreeReload(res); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		serveError(w, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Update on going for kdtree"))
+}
+
+func handlePackStation(w http.ResponseWriter, r *http.Request) {
+
+	res := resource.NewResources(r)
+	if err := GetServerStorage(res.Context).PackStations(); err != nil {
+		serveError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Packing done"))
+
 }

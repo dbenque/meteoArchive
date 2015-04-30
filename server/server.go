@@ -15,7 +15,7 @@ import (
 func serveError(w http.ResponseWriter, err error) {
 	w.WriteHeader(http.StatusInternalServerError)
 	w.Header().Set("Content-Type", "text/plain")
-	io.WriteString(w, "Internal Server Error")
+	io.WriteString(w, err.Error())
 }
 
 // Server Global Variable
@@ -39,6 +39,7 @@ func ApplyHttpHandler() {
 	r.HandleFunc("/meteo/geoloc", handleGetGeoloc)
 	r.HandleFunc("/meteo/distance", handleDistance)
 	r.HandleFunc("/meteo/near", handleNear)
+	r.HandleFunc("/meteo/packStation", handlePackStation)
 	r.HandleFunc("/meteo/kdtreeReload/{storageName}", handleKDTreeReload)
 	r.HandleFunc("/meteo/infoclimat/updateStations/{storageName}", handleInfoclimatUpdateStations)
 	r.HandleFunc("/meteo/infoclimat/getMonthlySerie", handleInfoclimatGetMonthlySerie)

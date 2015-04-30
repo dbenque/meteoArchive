@@ -205,6 +205,7 @@ func (s *MonthlyMeasureSerie) GetSerieIndexedByMonth(year int) MonthlyMeasureSer
 type Storage interface {
 	PutStation(p *Station) error
 	GetStation(origin string, remoteId string) *Station
+	PackStations() error
 	PutMonthlyMeasureSerie(p *Station, measures *MonthlyMeasureSerie) error
 	GetMonthlyMeasureSerie(p *Station) *MonthlyMeasureSerie
 	Persist() error

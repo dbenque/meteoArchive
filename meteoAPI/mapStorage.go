@@ -40,6 +40,10 @@ func (s *MapStorage) GetStation(origin string, remoteId string) *Station {
 	return &instance
 }
 
+func (s *MapStorage) PackStations() error {
+	return nil
+}
+
 //PutMonthlyMeasureSerie store measure for a station
 func (s *MapStorage) PutMonthlyMeasureSerie(p *Station, measures *MonthlyMeasureSerie) error {
 	s.MonthlySeries[p.GetKey()] = *measures
