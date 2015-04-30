@@ -161,7 +161,14 @@ func (s *AppEngineStorage) PackStations() error {
 			s.context.Errorf("unable to perform delete of previous chunks: %s", err.Error())
 		}
 	} else {
-		s.context.Errorf("Can't query previous chunks", err.Error())
+		if err != nil {
+			s.context.Errorf("Can't query previous chunks: %s", err.Error())
+		}
+
+		if keys == nil {
+			s.context.Warningf("Looks like there was no chunks before...")
+		}
+
 	}
 
 	// create new chunks
