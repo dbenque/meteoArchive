@@ -12,20 +12,18 @@ import (
 
 // Update the list of station for a given country
 func handleInfoclimatUpdateStations(w http.ResponseWriter, r *http.Request) {
-	// go func() {
-	// 	defer func() { fmt.Println("UpdateStation from infoclimat completed/ended") }()
 
-	inputCode := ""
-	if country, ok := r.URL.Query()["country"]; ok {
-		inputCode = country[0]
-	}
+	inputCode := r.PostFormValue("country")
 
 	res := resource.NewResources(r)
 	res.Logger().Infof("Updating stations for country %s. On going ...", inputCode)
 
 	website := infoclimat.InfoClimatWebsite{}
 	GetServerStorage(r).Initialize()
-	website.UpdateStations(res, GetServerStorage(r), inputCode)
+	if err := website.UpdateStations(res, GetServerStorage(r), inputCode); err != nil {
+		serveError(w, err)
+		return
+	}
 	GetServerStorage(r).Persist()
 	res.Logger().Infof("Stations updated for country %s. Completed", inputCode)
 	// }()

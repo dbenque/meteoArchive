@@ -224,6 +224,11 @@ func handlePackStation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := kdtreeReload(res); err != nil {
+		serveError(w, err)
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Packing done"))
 

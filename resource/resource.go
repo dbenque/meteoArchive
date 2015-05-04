@@ -2,6 +2,7 @@ package resource
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -63,12 +64,21 @@ type Storage interface {
 
 type StorageFactory func(c interface{}) (Storage, error)
 
+//------------- Task
+
+type TaskQueue interface {
+	AsTask(url string, params url.Values) error
+}
+
+type TaskQueueFactory func(c interface{}) (TaskQueue, error)
+
 //------------- Resource Factories
 
 type ResourceFactory struct {
-	Client  URLGetterFactory
-	Logger  LoggerFactory
-	Storage StorageFactory
+	Client    URLGetterFactory
+	Logger    LoggerFactory
+	Storage   StorageFactory
+	TaskQueue TaskQueueFactory
 }
 
 var ResourceFactoryInstance ResourceFactory
@@ -80,6 +90,7 @@ type ResourceInstances struct {
 	logger    Logger
 	urlGetter URLGetter
 	storage   Storage
+	taskQueue TaskQueue
 }
 
 func NewResources(context interface{}) *ResourceInstances {
@@ -119,4 +130,15 @@ func (r *ResourceInstances) Storage() Storage {
 		}
 	}
 	return r.storage
+}
+
+func (r *ResourceInstances) TaskQueue() TaskQueue {
+	if r.taskQueue == nil {
+		if l, err := ResourceFactoryInstance.TaskQueue(r.Context); err == nil {
+			r.taskQueue = l
+		} else {
+			return nil
+		}
+	}
+	return r.taskQueue
 }

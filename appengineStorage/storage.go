@@ -9,6 +9,7 @@ import (
 
 	"appengine"
 	"appengine/datastore"
+	"appengine/memcache"
 )
 
 type AppEngineStorage struct {
@@ -75,23 +76,48 @@ func (s *AppEngineStorage) GetMonthlyMeasureSerie(p *meteoAPI.Station) *meteoAPI
 func (s *AppEngineStorage) GetAllStations() (*meteoAPI.Stations, error) {
 
 	stations := make(meteoAPI.Stations, 0, 0)
-
-	// retrieve chunks and aggregate blob
-	q := datastore.NewQuery(PackedStationsChunkKind).Order("Index")
 	blob := make([]byte, 0, 0)
-	for t := q.Run(s.context); ; {
-		var x PackedStationsChunk
-		_, err := t.Next(&x)
-		if err == datastore.Done {
-			break
+
+	// retrieve thanks to memcached
+	item, err := memcache.Get(s.context, MaxChunckIndexKey)
+	if err == nil && err != memcache.ErrCacheMiss {
+
+		s.context.Infof("Retrieving stations chunks index from memcached")
+
+		maxChunk, _ := strconv.Atoi(string(item.Value))
+		for i := 0; i <= maxChunk; i++ {
+			x := PackedStationsChunk{}
+			x.Index = i
+			if errd := datastoreEntity.Retrieve(s.context, &x); errd != nil {
+				return nil, errd
+			}
+			blob = append(blob, x.Chunk...)
 		}
-		if err != nil {
-			return nil, err
+	} else {
+
+		s.context.Infof("Retrieving stations chunks querying datastore")
+
+		// retrieve chunks and aggregate blob
+		q := datastore.NewQuery(PackedStationsChunkKind).Order("Index")
+		maxIndex := 0
+		for t := q.Run(s.context); ; {
+			var x PackedStationsChunk
+			_, err := t.Next(&x)
+			if err == datastore.Done {
+				break
+			}
+			if err != nil {
+				return nil, err
+			}
+			blob = append(blob, x.Chunk...)
+			maxIndex++
 		}
-		blob = append(blob, x.Chunk...)
+
+		saveMaxChunckIndexinMemcached(s.context, maxIndex-1)
+
 	}
 
-	err := json.Unmarshal(blob, &stations)
+	err = json.Unmarshal(blob, &stations)
 
 	return &stations, err
 
@@ -103,9 +129,14 @@ func (s *AppEngineStorage) Persist() error {
 	return nil
 }
 
-const chunkSize = 1024*1024 - 10 // 1Mo which is the max for entity size
+// ---------------------------------------------
+// Chunks --------------------------------------
+// ---------------------------------------------
+const chunkSize = 1024 * 600 // 1Mo which is the max for entity size - buffer for index and 96 bytes reserved for the memcache internals (https://cloud.google.com/appengine/docs/go/memcache/)
 const PackedStationsChunkKind = "PackedStationsChunk"
+const MaxChunckIndexKey = "MaxChunckIndex"
 
+// PackedStationsChunk -------------------------
 type PackedStationsChunk struct {
 	Chunk []byte `datastore:",noindex"`
 	Index int
@@ -175,7 +206,19 @@ func (s *AppEngineStorage) PackStations() error {
 	l := len(dataj) / chunkSize
 	s.context.Infof("Creating new %d chunk(s)", l+1)
 	for i := 0; i <= l; i++ {
-		datastoreEntity.Store(s.context, newPackedStationsChunk(&dataj, i))
+		pchunk := newPackedStationsChunk(&dataj, i)
+		datastoreEntity.Store(s.context, pchunk)
 	}
+
+	saveMaxChunckIndexinMemcached(s.context, l)
+
 	return nil
+}
+
+func saveMaxChunckIndexinMemcached(c appengine.Context, index int) {
+	itemChunkIndex := &memcache.Item{
+		Key:   MaxChunckIndexKey,
+		Value: []byte(strconv.Itoa(index)),
+	}
+	memcache.Set(c, itemChunkIndex)
 }

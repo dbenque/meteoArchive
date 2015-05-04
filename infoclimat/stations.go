@@ -2,6 +2,7 @@ package infoclimat
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 
@@ -19,7 +20,7 @@ const (
 type InfoClimatWebsite struct {
 }
 
-func getCountry(res *resource.ResourceInstances) map[string]string {
+func GetCountry(res *resource.ResourceInstances) map[string]string {
 
 	doc, err := resource.GetGoqueryDocument(res.Client(), "http://www.infoclimat.fr/observations-meteo/temps-reel/bac-can/48810.html")
 	if err != nil {
@@ -110,17 +111,16 @@ func getStation(res *resource.ResourceInstances, stationID string, stationPath s
 }
 
 //UpdateStations update the given storage with the Infoclimat website's stations
-func (website *InfoClimatWebsite) UpdateStations(res *resource.ResourceInstances, s api.Storage, inputCountryCode string) {
+func (website *InfoClimatWebsite) UpdateStations(res *resource.ResourceInstances, s api.Storage, code string) error {
 
-	for code, country := range getCountry(res) {
-
-		if len(inputCountryCode) > 0 && inputCountryCode != code {
-			continue
-		}
-		res.Logger().Infof("[%s] grab stations on going...", code)
-		count := getCities(res, code, &s)
-		res.Logger().Infof("[%s] Country: %s, adding %d", code, country, count)
-
+	if len(code) == 0 {
+		res.Logger().Warningf("No Country code provided to infoclimate::UpdateStations")
+		return errors.New("No Country code provided to infoclimate::UpdateStations")
 	}
 
+	res.Logger().Infof("[%s] grab stations on going...", code)
+	count := getCities(res, code, &s)
+	res.Logger().Infof("[%s] , adding %d", code, count)
+
+	return nil
 }
