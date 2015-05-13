@@ -4,7 +4,7 @@ meteoArchive
 Feed the DB with stations of one country for infoclimat website
 
 
-http://127.0.0.1:8080/meteo/infoclimat/updateStations/mapStorage?country=FR   --> Launched as Task
+http://127.0.0.1:8080/meteo/infoclimat/updateStations?country=FR   --> Launched as Task
 
 Pack all the stations so that we can retrieve them within a low number of queries. This serialize the slice of all stations and build chunks of 1Mo into the datastore.
 
@@ -12,7 +12,7 @@ http://127.0.0.1:8080/meteo/packStation   --> Launch as Task
 
 Refresh the kdtree
 
-http://127.0.0.1:8080/meteo/kdtreeReload/mapStorage
+http://127.0.0.1:8080/meteo/kdtreeReload
 
 Geoloc API
 
@@ -32,4 +32,3 @@ TODO
 ====
 
 - create a job to feed db for one year or for one station
-- do the appengine module
